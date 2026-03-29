@@ -17,6 +17,10 @@ export class WebhooksDto {
   @IsString()
   @IsUrl()
   @IsDefined()
+  @IsSafeWebhookUrl({
+    message:
+      'Webhook URL must be a public HTTPS URL and cannot point to internal network addresses',
+  })
   url: string;
 
   @Type(() => WebhooksIntegrationDto)
