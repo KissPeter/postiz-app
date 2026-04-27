@@ -1,10 +1,11 @@
 import {
   ArrayMinSize, IsArray, IsBoolean, IsDateString, IsDefined, IsIn, IsNumber, IsOptional, IsString, MinLength, Validate, ValidateIf, ValidateNested
 } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import { MediaDto } from '@gitroom/nestjs-libraries/dtos/media/media.dto';
 import { allProviders, type AllProvidersSettings, EmptySettings } from '@gitroom/nestjs-libraries/dtos/posts/providers-settings/all.providers.settings';
 import { ValidContent } from '@gitroom/helpers/utils/valid.images';
+import { sanitizePostContent } from '@gitroom/helpers/utils/sanitize.post.content';
 
 export class Integration {
   @IsDefined()
@@ -16,6 +17,7 @@ export class PostContent {
   @IsDefined()
   @IsString()
   @Validate(ValidContent)
+  @Transform(({ value }) => sanitizePostContent(value))
   content: string;
 
   @IsOptional()
