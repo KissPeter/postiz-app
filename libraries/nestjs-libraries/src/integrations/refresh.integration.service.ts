@@ -6,6 +6,7 @@ import {
   AuthTokenDetails,
   SocialProvider,
 } from '@gitroom/nestjs-libraries/integrations/social/social.integrations.interface';
+import { timer } from '@gitroom/helpers/utils/timer';
 
 @Injectable()
 export class RefreshIntegrationService {
@@ -51,6 +52,49 @@ export class RefreshIntegrationService {
       .catch((err) => false);
 
     if (!refresh) {
+      // Two flows can refresh the same channel at once (two posts, a post and
+      // analytics). A provider that replaces the refresh token on every refresh
+      // rejects the second one while the first is still storing its tokens:
+      // wait for them and reuse them instead of flagging the channel.
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const stored = await this._integrationService.getIntegrationById(
+          integration.organizationId,
+          integration.id
+        );
+        if (
+          !stored ||
+          stored.refreshNeeded ||
+          stored.inBetweenSteps ||
+          stored.deletedAt
+        ) {
+          break;
+        }
+        if (
+          stored.internalId === integration.internalId &&
+          stored.providerIdentifier === integration.providerIdentifier &&
+          stored.refreshToken &&
+          stored.refreshToken !== integration.refreshToken &&
+          stored.token !== integration.token &&
+          stored.tokenExpiration &&
+          stored.tokenExpiration.getTime() > Date.now()
+        ) {
+          return {
+            id: stored.internalId,
+            name: stored.name,
+            username: stored.profile || '',
+            picture: stored.picture || '',
+            accessToken: stored.token,
+            refreshToken: stored.refreshToken,
+            expiresIn: Math.floor(
+              (stored.tokenExpiration.getTime() - Date.now()) / 1000
+            ),
+          };
+        }
+        if (attempt < 2) {
+          await timer(1000 * (attempt + 1));
+        }
+      }
+
       await this._integrationService.refreshNeeded(
         integration.organizationId,
         integration.id
