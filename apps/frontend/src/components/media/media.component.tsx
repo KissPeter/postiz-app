@@ -207,7 +207,7 @@ export const MediaBox: FC<{
   }, [selected]);
 
   const addToUpload = useCallback(async (e: ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files).slice(0, 5);
+    const files = Array.from(e.target.files).slice(0, 10);
     for (const file of files) {
       uppy.addFile(file);
     }
@@ -235,7 +235,7 @@ export const MediaBox: FC<{
         }
       }
 
-      for (const file of files.slice(0, 5)) {
+      for (const file of files.slice(0, 10)) {
         uppy.addFile(file);
       }
     },
@@ -286,7 +286,7 @@ export const MediaBox: FC<{
         >
           {!isLoading && !!data?.results?.length && (
             <div className="flex-1 text-[14px] font-[600] whitespace-pre-line">
-              Select or upload pictures (maximum 5 at a time).{'\n'}
+              Select or upload pictures (maximum 10 at a time).{'\n'}
               You can also drag & drop pictures.
             </div>
           )}
@@ -338,7 +338,7 @@ export const MediaBox: FC<{
                   You don't have any media yet
                 </div>
                 <div className="whitespace-pre-line text-newTextColor/[0.6] text-center">
-                  Select or upload pictures (maximum 5 at a time). {'\n'}
+                  Select or upload pictures (maximum 10 at a time). {'\n'}
                   You can also drag & drop pictures.
                 </div>
                 <div className="forceChange">{btn}</div>
