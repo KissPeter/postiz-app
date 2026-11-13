@@ -93,9 +93,9 @@ export class FarcasterProvider
       for (const post of postDetails) {
         const data = await client.publishCast({
           embeds:
-            post?.media?.map((media) => ({
+            (post?.media?.map((media) => ({
               url: media.path,
-            })) || [],
+            })) as any) || [],
           signerUuid: accessToken,
           text: post.message,
           ...(idHash ? { parent: idHash } : {}),
