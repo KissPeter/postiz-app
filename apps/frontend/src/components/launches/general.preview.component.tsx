@@ -1,3 +1,4 @@
+import { normaliseMediaUrl } from '@gitroom/react/helpers/normalise.media.url';
 import { useIntegration } from '@gitroom/frontend/components/launches/helpers/use.integration';
 import { useMediaDirectory } from '@gitroom/react/helpers/use.media.directory';
 import clsx from 'clsx';
@@ -66,7 +67,8 @@ export const GeneralPreviewComponent: FC<{
                   src={
                     current === 'global'
                       ? '/no-picture.jpg'
-                      : integration?.picture || '/no-picture.jpg'
+                      : normaliseMediaUrl(integration?.picture) ||
+                        '/no-picture.jpg'
                   }
                   alt="x"
                   className="rounded-full relative z-[2]"

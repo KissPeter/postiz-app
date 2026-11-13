@@ -1,5 +1,6 @@
 'use client';
 
+import { normaliseMediaUrl } from '@gitroom/react/helpers/normalise.media.url';
 import { EventEmitter } from 'events';
 import React, { FC, useCallback, useEffect, useMemo, useState } from 'react';
 import { TopTitle } from '@gitroom/frontend/components/launches/helpers/top.title.component';
@@ -175,7 +176,7 @@ export const PostSelector: FC<{
                         <div className="flex gap-[10px] items-center">
                           <div className="relative">
                             <img
-                              src={p.integration.picture}
+                              src={normaliseMediaUrl(p.integration.picture)}
                               className="w-[32px] h-[32px] rounded-full"
                             />
                             <img

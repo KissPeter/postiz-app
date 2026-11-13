@@ -1,5 +1,6 @@
 'use client';
 
+import { normaliseMediaUrl } from '@gitroom/react/helpers/normalise.media.url';
 import React, { FC, useCallback, useEffect, useMemo, useState } from 'react';
 import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
 import useSWR from 'swr';
@@ -294,7 +295,7 @@ export const ConnectChannels: FC = () => {
                       </div>
                     )}
                     <Image
-                      src={integration.picture}
+                      src={normaliseMediaUrl(integration.picture)}
                       className="rounded-full"
                       alt={integration.identifier}
                       width={32}

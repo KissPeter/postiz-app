@@ -1,5 +1,6 @@
 'use client';
 
+import { normaliseMediaUrl } from '@gitroom/react/helpers/normalise.media.url';
 import { AddProviderButton } from '@gitroom/frontend/components/launches/add.provider.component';
 import { FC, useCallback, useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
@@ -287,7 +288,7 @@ export const MenuComponent: FC<
         )}
         <ImageWithFallback
           fallbackSrc={`/icons/platforms/${integration.identifier}.png`}
-          src={integration.picture || '/no-picture.jpg'}
+          src={normaliseMediaUrl(integration.picture) || '/no-picture.jpg'}
           className="rounded-[8px]"
           alt={integration.identifier}
           width={36}

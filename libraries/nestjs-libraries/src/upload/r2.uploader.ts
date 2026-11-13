@@ -12,6 +12,7 @@ import { Request, Response } from 'express';
 import crypto from 'crypto';
 import path from 'path';
 import { makeId } from '@gitroom/nestjs-libraries/services/make.is';
+import { trimTrailingSlashes } from '@gitroom/nestjs-libraries/upload/trim.slashes';
 
 const {
   CLOUDFLARE_ACCOUNT_ID,
@@ -75,7 +76,7 @@ export async function simpleUpload(
   const command = new PutObjectCommand({ ...params });
   await R2.send(command);
 
-  return CLOUDFLARE_BUCKET_URL + '/' + randomFilename;
+  return trimTrailingSlashes(CLOUDFLARE_BUCKET_URL) + '/' + randomFilename;
 }
 
 export async function createMultipartUpload(req: Request, res: Response) {
@@ -174,7 +175,7 @@ export async function completeMultipartUpload(req: Request, res: Response) {
     });
     const response = await R2.send(command);
     response.Location =
-      process.env.CLOUDFLARE_BUCKET_URL +
+      trimTrailingSlashes(CLOUDFLARE_BUCKET_URL) +
       '/' +
       response?.Location?.split('/').at(-1);
     return response;

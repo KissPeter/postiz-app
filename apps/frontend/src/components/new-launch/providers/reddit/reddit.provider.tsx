@@ -1,5 +1,6 @@
 'use client';
 
+import { normaliseMediaUrl } from '@gitroom/react/helpers/normalise.media.url';
 import { FC, useCallback } from 'react';
 import {
   PostComment,
@@ -122,7 +123,7 @@ const RedditPreview: FC = (props) => {
                       <Image
                         width={48}
                         height={48}
-                        src={integration?.picture!}
+                        src={normaliseMediaUrl(integration?.picture!)}
                         alt="x"
                         className="rounded-full w-full h-full relative z-[2]"
                       />

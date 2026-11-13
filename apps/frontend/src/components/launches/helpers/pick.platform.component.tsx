@@ -1,3 +1,4 @@
+import { normaliseMediaUrl } from '@gitroom/react/helpers/normalise.media.url';
 import { FC, useCallback, useEffect, useRef, useState } from 'react';
 import { Integrations } from '@gitroom/frontend/components/launches/calendar.context';
 import { useMoveToIntegrationListener } from '@gitroom/frontend/components/launches/helpers/use.move.to.integration';
@@ -245,7 +246,10 @@ export const PickPlatforms: FC<{
                         )}
                       >
                         <Image
-                          src={integration.picture || '/no-picture.jpg'}
+                          src={
+                            normaliseMediaUrl(integration.picture) ||
+                            '/no-picture.jpg'
+                          }
                           className="rounded-full"
                           alt={integration.identifier}
                           width={32}
@@ -284,7 +288,10 @@ export const PickPlatforms: FC<{
                         <div className="flex items-center justify-center gap-[10px]">
                           <div className="relative">
                             <img
-                              src={integration.picture || '/no-picture.jpg'}
+                              src={
+                                normaliseMediaUrl(integration.picture) ||
+                                '/no-picture.jpg'
+                              }
                               className="rounded-full"
                               alt={integration.identifier}
                               width={24}

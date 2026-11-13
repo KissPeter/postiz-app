@@ -1,5 +1,6 @@
 'use client';
 
+import { normaliseMediaUrl } from '@gitroom/react/helpers/normalise.media.url';
 import React, { FC, useCallback, useContext, useMemo } from 'react';
 import { MarketplaceProvider } from '@gitroom/frontend/components/marketplace/marketplace.provider';
 import { useUser } from '@gitroom/frontend/components/layout/user.context';
@@ -167,7 +168,7 @@ export const Offer: FC<{
           >
             <div className="relative">
               <img
-                src={item.integration.picture}
+                src={normaliseMediaUrl(item.integration.picture)}
                 alt="platform"
                 className="w-[24px] h-[24px] rounded-full"
               />
