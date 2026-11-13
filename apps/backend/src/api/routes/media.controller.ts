@@ -25,6 +25,9 @@ import { SubscriptionService } from '@gitroom/nestjs-libraries/database/prisma/s
 import { UploadFactory } from '@gitroom/nestjs-libraries/upload/upload.factory';
 import { trimTrailingSlashes } from '@gitroom/nestjs-libraries/upload/trim.slashes';
 import { SaveMediaInformationDto } from '@gitroom/nestjs-libraries/dtos/media/save.media.information.dto';
+import { CreateMediaFolderDto } from '@gitroom/nestjs-libraries/dtos/media/create.media.folder.dto';
+import { RenameMediaFolderDto } from '@gitroom/nestjs-libraries/dtos/media/rename.media.folder.dto';
+import { MoveMediaDto } from '@gitroom/nestjs-libraries/dtos/media/move.media.dto';
 import { VideoDto } from '@gitroom/nestjs-libraries/dtos/videos/video.dto';
 import { VideoFunctionDto } from '@gitroom/nestjs-libraries/dtos/videos/video.function.dto';
 
@@ -155,6 +158,38 @@ export class MediaController {
     );
   }
 
+  @Get('/folders')
+  getFolders(@GetOrgFromRequest() org: Organization) {
+    return this._mediaService.getFolders(org.id);
+  }
+
+  @Post('/folders')
+  createFolder(
+    @GetOrgFromRequest() org: Organization,
+    @Body() body: CreateMediaFolderDto
+  ) {
+    return this._mediaService.createFolder(org.id, body);
+  }
+
+  @Post('/folders/:id')
+  renameFolder(
+    @GetOrgFromRequest() org: Organization,
+    @Param('id') id: string,
+    @Body() body: RenameMediaFolderDto
+  ) {
+    return this._mediaService.renameFolder(org.id, id, body);
+  }
+
+  @Delete('/folders/:id')
+  deleteFolder(@GetOrgFromRequest() org: Organization, @Param('id') id: string) {
+    return this._mediaService.deleteFolder(org.id, id);
+  }
+
+  @Post('/move')
+  moveMedia(@GetOrgFromRequest() org: Organization, @Body() body: MoveMediaDto) {
+    return this._mediaService.moveMedia(org.id, body.id, body.folderId);
+  }
+
   @Post('/:endpoint')
   async uploadFile(
     @GetOrgFromRequest() org: Organization,
@@ -183,9 +218,10 @@ export class MediaController {
   @Get('/')
   getMedia(
     @GetOrgFromRequest() org: Organization,
-    @Query('page') page: number
+    @Query('page') page: number,
+    @Query('folderId') folderId?: string
   ) {
-    return this._mediaService.getMedia(org.id, page);
+    return this._mediaService.getMedia(org.id, page, folderId);
   }
 
   @Get('/video-options')
