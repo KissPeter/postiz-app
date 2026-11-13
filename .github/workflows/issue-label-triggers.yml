@@ -8,7 +8,7 @@ on:
 jobs:
   closed-public-website:
     if: github.event.label.name == 'trigger-public-website'
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, mac-mini]
     permissions:
       issues: write
     steps:
