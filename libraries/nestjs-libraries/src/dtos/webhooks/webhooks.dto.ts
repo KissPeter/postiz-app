@@ -1,5 +1,6 @@
 import { IsDefined, IsOptional, IsString, IsUrl } from 'class-validator';
 import { Type } from 'class-transformer';
+import { IsSafeWebhookUrl } from '@gitroom/nestjs-libraries/dtos/webhooks/webhook.url.validator';
 
 export class WebhooksIntegrationDto {
   @IsString()
@@ -17,6 +18,10 @@ export class WebhooksDto {
   @IsString()
   @IsUrl()
   @IsDefined()
+  @IsSafeWebhookUrl({
+    message:
+      'Webhook URL must be a public HTTPS URL and cannot point to internal network addresses',
+  })
   url: string;
 
   @Type(() => WebhooksIntegrationDto)
