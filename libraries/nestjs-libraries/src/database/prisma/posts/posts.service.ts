@@ -456,6 +456,7 @@ export class PostsService {
               getIntegration.mentionFormat
             ),
             settings: JSON.parse(p.settings || '{}'),
+            delay: p.delay || 0,
             media: await this.updateMedia(
               p.id,
               JSON.parse(p.image || '[]'),

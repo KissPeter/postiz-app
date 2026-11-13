@@ -8,6 +8,7 @@ import {
 import { makeId } from '@gitroom/nestjs-libraries/services/make.is';
 import dayjs from 'dayjs';
 import { timer } from '@gitroom/helpers/utils/timer';
+import { waitCommentDelay } from '@gitroom/helpers/utils/comment.delay';
 import { SocialAbstract } from '@gitroom/nestjs-libraries/integrations/social.abstract';
 import { FacebookDto } from '@gitroom/nestjs-libraries/dtos/posts/providers-settings/facebook.dto';
 import { DribbbleDto } from '@gitroom/nestjs-libraries/dtos/posts/providers-settings/dribbble.dto';
@@ -423,6 +424,7 @@ export class FacebookProvider extends SocialAbstract implements SocialProvider {
     const postsArray = [];
     let commentId = finalId;
     for (const comment of comments) {
+      await waitCommentDelay(comment.delay);
       const data = await (
         await this.fetch(
           `https://graph.facebook.com/v20.0/${commentId}/comments?access_token=${accessToken}&fields=id,permalink_url`,
