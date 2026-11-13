@@ -5,7 +5,7 @@ import { NotificationService } from '@gitroom/nestjs-libraries/database/prisma/n
 import { AddTeamMemberDto } from '@gitroom/nestjs-libraries/dtos/settings/add.team.member.dto';
 import { AuthService } from '@gitroom/helpers/auth/auth.service';
 import dayjs from 'dayjs';
-import { makeId } from '@gitroom/nestjs-libraries/services/make.is';
+import { makeSecureId } from '@gitroom/nestjs-libraries/services/make.secure.id';
 import { Organization } from '@prisma/client';
 import { AutopostService } from '@gitroom/nestjs-libraries/database/prisma/autopost/autopost.service';
 
@@ -71,7 +71,7 @@ export class OrganizationService {
 
   async inviteTeamMember(orgId: string, body: AddTeamMemberDto) {
     const timeLimit = dayjs().add(1, 'hour').format('YYYY-MM-DD HH:mm:ss');
-    const id = makeId(5);
+    const id = makeSecureId(5);
     // only the invite fields, the body can carry undeclared properties
     const url =
       process.env.FRONTEND_URL +

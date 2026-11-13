@@ -1,3 +1,4 @@
+import { randomInt } from 'crypto';
 import { IUploadProvider } from './upload.interface';
 import { mkdirSync, unlink, writeFileSync } from 'fs';
 import { resolve, sep } from 'path';
@@ -29,7 +30,7 @@ export class LocalStorage implements IUploadProvider {
 
     const randomName = Array(32)
       .fill(null)
-      .map(() => Math.round(Math.random() * 16).toString(16))
+      .map(() => randomInt(16).toString(16))
       .join('');
 
     const filePath = `${dir}/${randomName}.${findExtension}`;
@@ -63,7 +64,7 @@ export class LocalStorage implements IUploadProvider {
 
       const randomName = Array(32)
         .fill(null)
-        .map(() => Math.round(Math.random() * 16).toString(16))
+        .map(() => randomInt(16).toString(16))
         .join('');
 
       const filePath = `${dir}/${randomName}${safeExt}`;

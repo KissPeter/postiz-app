@@ -1,4 +1,4 @@
-import { makeId } from '@gitroom/nestjs-libraries/services/make.is';
+import { makeSecureId } from '@gitroom/nestjs-libraries/services/make.secure.id';
 import { google } from 'googleapis';
 import { OAuth2Client } from 'google-auth-library/build/src/auth/oauth2client';
 import { ProvidersInterface } from '@gitroom/backend/services/auth/providers.interface';
@@ -33,7 +33,7 @@ const clientAndYoutube = () => {
 
 export class GoogleProvider implements ProvidersInterface {
   generateLink() {
-    const state = makeId(7);
+    const state = makeSecureId(7);
     const { client } = clientAndYoutube();
     return client.generateAuthUrl({
       access_type: 'online',
