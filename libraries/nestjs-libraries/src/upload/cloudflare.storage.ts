@@ -6,9 +6,12 @@ import mime from 'mime-types';
 import { getExtension } from 'mime';
 import { IUploadProvider } from './upload.interface';
 import axios from 'axios';
+import { trimTrailingSlashes } from './trim.slashes';
 
 class CloudflareStorage implements IUploadProvider {
   private _client: S3Client;
+  // Normalised once, so every `${this._uploadUrl}/${key}` below is single-slashed.
+  private _uploadUrl: string;
 
   constructor(
     accountID: string,
@@ -16,8 +19,9 @@ class CloudflareStorage implements IUploadProvider {
     secretKey: string,
     private region: string,
     private _bucketName: string,
-    private _uploadUrl: string
+    uploadUrl: string
   ) {
+    this._uploadUrl = trimTrailingSlashes(uploadUrl);
     this._client = new S3Client({
       endpoint: `https://${accountID}.r2.cloudflarestorage.com`,
       region,

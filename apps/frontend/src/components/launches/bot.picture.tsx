@@ -1,3 +1,4 @@
+import { normaliseMediaUrl } from '@gitroom/react/helpers/normalise.media.url';
 import { TopTitle } from '@gitroom/frontend/components/launches/helpers/top.title.component';
 import React, { FC, FormEventHandler, useCallback, useState } from 'react';
 import { Integrations } from '@gitroom/frontend/components/launches/calendar.context';
@@ -19,7 +20,7 @@ export const BotPicture: FC<{
   const toast = useToaster();
   const [nick, setNickname] = useState(props.integration.name);
   const [picture, setPicture] = useState(
-    props.integration.picture || '/no-picture.jpg'
+    normaliseMediaUrl(props.integration.picture) || '/no-picture.jpg'
   );
   const fetch = useFetch();
   const submitForm: FormEventHandler<HTMLFormElement> = useCallback(

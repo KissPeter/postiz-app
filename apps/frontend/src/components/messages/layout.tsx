@@ -1,5 +1,6 @@
 'use client';
 
+import { normaliseMediaUrl } from '@gitroom/react/helpers/normalise.media.url';
 import { FC, ReactNode, useCallback, useMemo } from 'react';
 import clsx from 'clsx';
 import useSWR from 'swr';
@@ -38,7 +39,7 @@ const Card: FC<{
       <div className="w-[40px] h-[40px] rounded-full bg-amber-200">
         {showFrom?.picture?.path && (
           <img
-            src={showFrom.picture.path}
+            src={normaliseMediaUrl(showFrom.picture.path)}
             alt={showFrom.name || 'Noname'}
             className="w-full h-full rounded-full"
           />

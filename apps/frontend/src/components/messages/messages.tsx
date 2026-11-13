@@ -1,5 +1,6 @@
 'use client';
 
+import { normaliseMediaUrl } from '@gitroom/react/helpers/normalise.media.url';
 import dayjs from 'dayjs';
 export interface Root {
   id: string;
@@ -98,7 +99,7 @@ export const Message: FC<{
         <div className="w-[24px] h-[24px] rounded-full bg-amber-200">
           {!!person?.picture?.path && (
             <img
-              src={person.picture.path}
+              src={normaliseMediaUrl(person.picture.path)}
               alt="person"
               className="w-[24px] h-[24px] rounded-full"
             />
@@ -228,7 +229,7 @@ export const Messages = () => {
             <div className="w-[32px] h-[32px] rounded-full bg-amber-200">
               {!!showFrom?.picture?.path && (
                 <img
-                  src={showFrom?.picture?.path}
+                  src={normaliseMediaUrl(showFrom?.picture?.path)}
                   alt="seller"
                   className="w-[32px] h-[32px] rounded-full"
                 />

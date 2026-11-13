@@ -1,10 +1,11 @@
 import {
-  ArrayMinSize, IsArray, IsBoolean, IsDateString, IsDefined, IsIn, IsNumber, IsOptional, IsString, MinLength, Validate, ValidateIf, ValidateNested
+  ArrayMinSize, IsArray, IsBoolean, IsDateString, IsDefined, IsIn, IsInt, IsNumber, IsOptional, IsString, Max, Min, MinLength, Validate, ValidateIf, ValidateNested
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { MediaDto } from '@gitroom/nestjs-libraries/dtos/media/media.dto';
 import { allProviders, type AllProvidersSettings, EmptySettings } from '@gitroom/nestjs-libraries/dtos/posts/providers-settings/all.providers.settings';
 import { ValidContent } from '@gitroom/helpers/utils/valid.images';
+import { MAX_COMMENT_DELAY_MINUTES } from '@gitroom/helpers/utils/comment.delay';
 
 export class Integration {
   @IsDefined()
@@ -26,6 +27,13 @@ export class PostContent {
   @Type(() => MediaDto)
   @ValidateNested({ each: true })
   image: MediaDto[];
+
+  // Minutes to wait after the previous item before publishing this comment.
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(MAX_COMMENT_DELAY_MINUTES)
+  delay?: number;
 }
 
 export class Post {

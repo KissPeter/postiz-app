@@ -1,5 +1,6 @@
 'use client';
 
+import { normaliseMediaUrl } from '@gitroom/react/helpers/normalise.media.url';
 import useSWR from 'swr';
 import { useCallback, useMemo, useState } from 'react';
 import { capitalize, orderBy } from 'lodash';
@@ -244,7 +245,7 @@ export const PlatformAnalytics = () => {
                 </div>
                 <ImageWithFallback
                   fallbackSrc={`/icons/platforms/${integration.identifier}.png`}
-                  src={integration.picture}
+                  src={normaliseMediaUrl(integration.picture)}
                   className="rounded-[8px]"
                   alt={integration.identifier}
                   width={36}

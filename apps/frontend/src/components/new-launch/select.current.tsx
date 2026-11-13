@@ -1,5 +1,6 @@
 'use client';
 
+import { normaliseMediaUrl } from '@gitroom/react/helpers/normalise.media.url';
 import { FC, RefObject, useEffect, useRef, useState } from 'react';
 import { useLaunchStore } from '@gitroom/frontend/components/new-launch/store';
 import clsx from 'clsx';
@@ -112,7 +113,7 @@ export const SelectCurrent: FC = () => {
                 )}
               >
                 <Image
-                  src={integration.picture || '/no-picture.jpg'}
+                  src={normaliseMediaUrl(integration.picture) || '/no-picture.jpg'}
                   className="rounded-full min-w-[26px]"
                   alt={integration.identifier}
                   width={26}
