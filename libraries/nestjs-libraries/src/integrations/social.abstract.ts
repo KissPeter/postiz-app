@@ -1,6 +1,7 @@
 import { timer } from '@gitroom/helpers/utils/timer';
 import { concurrency } from '@gitroom/helpers/utils/concurrency.service';
 import { Integration } from '@prisma/client';
+import { DashboardFunction } from '@gitroom/nestjs-libraries/integrations/dashboard.function.decorator';
 
 export class RefreshToken {
   constructor(
@@ -35,6 +36,7 @@ export abstract class SocialAbstract {
     return undefined;
   }
 
+  @DashboardFunction()
   public async mention(
     token: string,
     d: { query: string },

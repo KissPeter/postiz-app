@@ -14,6 +14,7 @@ import { timer } from '@gitroom/helpers/utils/timer';
 import { Integration } from '@prisma/client';
 import { Rules } from '@gitroom/nestjs-libraries/chat/rules.description.decorator';
 import { makeSecureId } from '@gitroom/nestjs-libraries/services/make.secure.id';
+import { DashboardFunction } from '@gitroom/nestjs-libraries/integrations/dashboard.function.decorator';
 
 @Rules(
   'TikTok can have one video or one picture or multiple pictures, it cannot be without an attachment'
@@ -343,6 +344,7 @@ export class TiktokProvider extends SocialAbstract implements SocialProvider {
     };
   }
 
+  @DashboardFunction()
   async maxVideoLength(accessToken: string) {
     const {
       data: { max_video_post_duration_sec },

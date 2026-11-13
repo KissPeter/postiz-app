@@ -12,6 +12,7 @@ import { SocialAbstract } from '@gitroom/nestjs-libraries/integrations/social.ab
 import * as process from 'node:process';
 import dayjs from 'dayjs';
 import { Rules } from '@gitroom/nestjs-libraries/chat/rules.description.decorator';
+import { DashboardFunction } from '@gitroom/nestjs-libraries/integrations/dashboard.function.decorator';
 import { GmbSettingsDto } from '@gitroom/nestjs-libraries/dtos/posts/providers-settings/gmb.settings.dto';
 
 const clientAndGmb = () => {
@@ -165,6 +166,7 @@ export class GmbProvider extends SocialAbstract implements SocialProvider {
     };
   }
 
+  @DashboardFunction()
   async pages(accessToken: string) {
     // Get all accounts first
     const accountsResponse = await fetch(
