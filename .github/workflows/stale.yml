@@ -8,7 +8,7 @@ on:
 jobs:
   close-issues:
     if: github.repository == 'gitroomhq/postiz-app'
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, mac-mini]
     permissions:
       issues: write
       pull-requests: write
