@@ -23,6 +23,7 @@ import {
 } from '@gitroom/nestjs-libraries/integrations/social.abstract';
 import { BullMqClient } from '@gitroom/nestjs-libraries/bull-mq-transport-new/client';
 import { timer } from '@gitroom/helpers/utils/timer';
+import { resolveUploadPath } from '@gitroom/helpers/utils/read.or.fetch';
 import { AuthTokenDetails } from '@gitroom/nestjs-libraries/integrations/social/social.integrations.interface';
 import utc from 'dayjs/plugin/utc';
 import { MediaService } from '@gitroom/nestjs-libraries/database/prisma/media/media.service';
@@ -196,7 +197,7 @@ export class PostsService {
               type: 'image',
               path:
                 m.path.indexOf('http') === -1
-                  ? process.env.UPLOAD_DIRECTORY + m.path
+                  ? resolveUploadPath(process.env.UPLOAD_DIRECTORY + m.path)
                   : m.path,
             };
           })
@@ -244,7 +245,7 @@ export class PostsService {
                 type: 'image',
                 path:
                   path.indexOf('http') === -1
-                    ? process.env.UPLOAD_DIRECTORY + path
+                    ? resolveUploadPath(process.env.UPLOAD_DIRECTORY + path)
                     : path,
               };
             }
