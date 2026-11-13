@@ -9,6 +9,7 @@ import weekOfYear from 'dayjs/plugin/weekOfYear';
 import isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
 import utc from 'dayjs/plugin/utc';
 import { v4 as uuidv4 } from 'uuid';
+import { clampCommentDelay } from '@gitroom/helpers/utils/comment.delay';
 import { CreateTagDto } from '@gitroom/nestjs-libraries/dtos/posts/create.tag.dto';
 
 dayjs.extend(isoWeek);
@@ -396,6 +397,7 @@ export class PostsRepository {
           : {}),
         content: value.content,
         group: uuid,
+        delay: posts.length ? clampCommentDelay(value.delay) : 0,
         intervalInDays: inter ? +inter : null,
         approvedSubmitForOrder: APPROVED_SUBMIT_FOR_ORDER.NO,
         state: state === 'draft' ? ('DRAFT' as const) : ('QUEUE' as const),

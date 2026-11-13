@@ -92,6 +92,7 @@ export type PostDetails<T = any> = {
   settings: T;
   media?: MediaContent[];
   poll?: PollDetails;
+  delay?: number; // minutes to wait before publishing this comment
 };
 
 export type PollDetails = {

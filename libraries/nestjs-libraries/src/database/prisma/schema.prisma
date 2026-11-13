@@ -399,6 +399,7 @@ model Post {
   approvedSubmitForOrder     APPROVED_SUBMIT_FOR_ORDER @default(NO)
   lastMessageId              String?
   intervalInDays             Int?
+  delay                      Int                       @default(0)
   error                      String?
   createdAt                  DateTime                  @default(now())
   updatedAt                  DateTime                  @updatedAt

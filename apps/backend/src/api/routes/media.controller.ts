@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -108,6 +109,15 @@ export class MediaController {
     if (!name) {
       return false;
     }
+    // the name must be a bare file name, never a path that climbs out of the bucket
+    if (
+      typeof name !== 'string' ||
+      /[\\/]/.test(name) ||
+      name === '.' ||
+      name === '..'
+    ) {
+      throw new BadRequestException('Invalid file name');
+    }
     return this._mediaService.saveFile(
       org.id,
       name,
@@ -183,10 +193,12 @@ export class MediaController {
   }
 
   @Post('/video/function')
-  videoFunction(
-    @Body() body: VideoFunctionDto
-  ) {
-    return this._mediaService.videoFunction(body.identifier, body.functionName, body.params);
+  videoFunction(@Body() body: VideoFunctionDto) {
+    return this._mediaService.videoFunction(
+      body.identifier,
+      body.functionName,
+      body.params
+    );
   }
 
   @Get('/generate-video/:type/allowed')
