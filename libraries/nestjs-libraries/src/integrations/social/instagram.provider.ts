@@ -490,10 +490,24 @@ export class InstagramProvider
               )}`
             : ``;
 
+        // share_to_feed is only supported for Reels (single video, not a story)
+        // and only sent when explicitly turned off (Meta defaults to true).
+        const shareToFeedSetting = firstPost?.settings?.share_to_feed as any;
+        const shareToFeed =
+          shareToFeedSetting !== undefined &&
+          shareToFeedSetting !== null &&
+          shareToFeedSetting !== true &&
+          shareToFeedSetting !== 'true' &&
+          !isStory &&
+          firstPost?.media?.length === 1 &&
+          m.path.indexOf('.mp4') > -1
+            ? `&share_to_feed=false`
+            : ``;
+
         console.log(collaborators);
         const { id: photoId } = await (
           await this.fetch(
-            `https://${type}/v20.0/${id}/media?${mediaType}${isCarousel}${collaborators}&access_token=${accessToken}${caption}`,
+            `https://${type}/v20.0/${id}/media?${mediaType}${isCarousel}${collaborators}${shareToFeed}&access_token=${accessToken}${caption}`,
             {
               method: 'POST',
             }

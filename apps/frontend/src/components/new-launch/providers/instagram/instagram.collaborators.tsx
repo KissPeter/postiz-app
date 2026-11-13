@@ -6,6 +6,7 @@ import {
 } from '@gitroom/frontend/components/new-launch/providers/high.order.provider';
 import { FC } from 'react';
 import { Select } from '@gitroom/react/form/select';
+import { Checkbox } from '@gitroom/react/form/checkbox';
 import { useSettings } from '@gitroom/frontend/components/launches/helpers/use.values';
 import { InstagramDto } from '@gitroom/nestjs-libraries/dtos/posts/providers-settings/instagram.dto';
 import { InstagramCollaboratorsTags } from '@gitroom/frontend/components/new-launch/providers/instagram/instagram.tags';
@@ -49,6 +50,20 @@ const InstagramCollaborators: FC<{
             value: [],
           })}
         />
+      )}
+
+      {postCurrentType !== 'story' && (
+        <div className="mt-[18px]">
+          <Checkbox
+            {...register('share_to_feed', {
+              value: true,
+            })}
+            label={t(
+              'instagram_share_to_feed',
+              'Share Reel to Feed (Reels only - single video)'
+            )}
+          />
+        </div>
       )}
     </>
   );

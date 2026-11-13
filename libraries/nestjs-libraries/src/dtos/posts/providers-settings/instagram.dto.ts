@@ -2,6 +2,7 @@ import { Type } from 'class-transformer';
 import {
   IsArray,
   IsDefined,
+  IsBoolean,
   IsIn,
   IsString,
   ValidateNested,
@@ -23,4 +24,8 @@ export class InstagramDto {
   @IsArray()
   @IsOptional()
   collaborators: Collaborators[];
+
+  @IsOptional()
+  @IsBoolean()
+  share_to_feed?: boolean;
 }
