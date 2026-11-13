@@ -4,6 +4,7 @@ import { mkdirSync, unlink, writeFileSync } from 'fs';
 import mime from 'mime';
 import { extname } from 'path';
 import axios from 'axios';
+import { trimTrailingSlashes } from './trim.slashes';
 
 export class LocalStorage implements IUploadProvider {
   constructor(private uploadDirectory: string) {}
@@ -34,7 +35,9 @@ export class LocalStorage implements IUploadProvider {
     // Logic to save the file to the filesystem goes here
     writeFileSync(filePath, loadImage.data);
 
-    return process.env.FRONTEND_URL + '/uploads' + publicPath;
+    return (
+      trimTrailingSlashes(process.env.FRONTEND_URL) + '/uploads' + publicPath
+    );
   }
 
   async uploadFile(file: Express.Multer.File): Promise<any> {
@@ -63,7 +66,10 @@ export class LocalStorage implements IUploadProvider {
 
       return {
         filename: `${randomName}${extname(file.originalname)}`,
-        path: process.env.FRONTEND_URL + '/uploads' + publicPath,
+        path:
+          trimTrailingSlashes(process.env.FRONTEND_URL) +
+          '/uploads' +
+          publicPath,
         mimetype: file.mimetype,
         originalname: file.originalname,
       };

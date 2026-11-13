@@ -1,3 +1,4 @@
+import { normaliseMediaUrl } from '@gitroom/react/helpers/normalise.media.url';
 import React, { FC, useCallback, useContext, useMemo, useState } from 'react';
 import { MarketplaceProvider } from '@gitroom/frontend/components/marketplace/marketplace.provider';
 import { useUser } from '@gitroom/frontend/components/layout/user.context';
@@ -60,7 +61,7 @@ export const NewOrder: FC<{
         <div className="relative">
           <img
             className="w-[20px] h-[20px] rounded-full"
-            src={p.picture}
+            src={normaliseMediaUrl(p.picture)}
             alt={p.name}
           />
           <img

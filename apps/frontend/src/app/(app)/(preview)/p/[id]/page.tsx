@@ -1,3 +1,4 @@
+import { normaliseMediaUrl } from '@gitroom/react/helpers/normalise.media.url';
 import { internalFetch } from '@gitroom/helpers/utils/internal.fetch';
 export const dynamic = 'force-dynamic';
 import { Metadata } from 'next';
@@ -123,7 +124,7 @@ export default async function Auth({
                         <img
                           className="w-full h-full relative z-[20] bg-black aspect-square rounded-full border-tableBorder"
                           alt={post[0].integration.name}
-                          src={post[0].integration.picture}
+                          src={normaliseMediaUrl(post[0].integration.picture)}
                         />
                       </div>
                       <div className="absolute -end-[5px] -bottom-[5px] w-[30px] h-[30px] z-[20]">

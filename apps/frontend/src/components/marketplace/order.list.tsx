@@ -1,3 +1,4 @@
+import { normaliseMediaUrl } from '@gitroom/react/helpers/normalise.media.url';
 import React, { FC, useCallback, useMemo } from 'react';
 import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
 import useSWR from 'swr';
@@ -51,7 +52,7 @@ export const OrderList: FC<{
                   <div className="flex gap-[20px] items-center">
                     <div className="relative">
                       <img
-                        src={details.integration.picture}
+                        src={normaliseMediaUrl(details.integration.picture)}
                         alt="platform"
                         className="w-[24px] h-[24px] rounded-full"
                       />

@@ -1,5 +1,6 @@
 'use client';
 
+import { normaliseMediaUrl } from '@gitroom/react/helpers/normalise.media.url';
 import { FC } from 'react';
 import clsx from 'clsx';
 import Image from 'next/image';
@@ -65,7 +66,7 @@ export const PicksSocialsComponent: FC<{ toolTip?: boolean }> = ({
                     )}
                   >
                     <Image
-                      src={integration.picture || '/no-picture.jpg'}
+                      src={normaliseMediaUrl(integration.picture) || '/no-picture.jpg'}
                       className={clsx(
                         'rounded-full transition-all min-w-[42px] border-[1.5px] min-h-[42px]',
                         selectedIntegrations.findIndex(

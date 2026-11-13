@@ -1,5 +1,6 @@
 'use client';
 
+import { normaliseMediaUrl } from '@gitroom/react/helpers/normalise.media.url';
 import React, {
   createContext,
   FC,
@@ -163,7 +164,7 @@ export const AgentList: FC<{ onChange: (arr: any[]) => void }> = ({
                 </div>
                 <ImageWithFallback
                   fallbackSrc={`/icons/platforms/${integration.identifier}.png`}
-                  src={integration.picture}
+                  src={normaliseMediaUrl(integration.picture)}
                   className="rounded-[8px]"
                   alt={integration.identifier}
                   width={36}

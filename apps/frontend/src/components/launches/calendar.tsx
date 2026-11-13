@@ -1,5 +1,6 @@
 'use client';
 
+import { normaliseMediaUrl } from '@gitroom/react/helpers/normalise.media.url';
 import React, {
   FC,
   Fragment,
@@ -110,7 +111,7 @@ export const DayView = () => {
   const options = useMemo(() => {
     const createdPosts = posts.map((post) => ({
       integration: [integrations.find((i) => i.id === post.integration.id)!],
-      image: post.integration.picture,
+      image: normaliseMediaUrl(post.integration.picture),
       identifier: post.integration.providerIdentifier,
       id: post.integration.id,
       name: post.integration.name,
@@ -129,7 +130,7 @@ export const DayView = () => {
                 identifier: p.identifier,
                 name: p.name,
                 id: p.id,
-                image: p.picture,
+                image: normaliseMediaUrl(p.picture),
                 time: t.time,
               }))
             ),
@@ -746,7 +747,8 @@ export const CalendarColumn: FC<{
                       >
                         <Image
                           src={
-                            selectedIntegrations.picture || '/no-picture.jpg'
+                            normaliseMediaUrl(selectedIntegrations.picture) ||
+                            '/no-picture.jpg'
                           }
                           className="rounded-[8px]"
                           alt={selectedIntegrations.identifier}
@@ -904,7 +906,9 @@ const CalendarItem: FC<{
         <div className={clsx('relative min-w-[20px]')}>
           <img
             className="w-[20px] h-[20px] rounded-[8px]"
-            src={post.integration.picture! || '/no-picture.jpg'}
+            src={
+              normaliseMediaUrl(post.integration.picture!) || '/no-picture.jpg'
+            }
           />
           <img
             className="w-[12px] h-[12px] rounded-[8px] absolute z-10 top-[10px] end-0 border border-fifth"
