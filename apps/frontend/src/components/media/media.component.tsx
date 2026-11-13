@@ -37,6 +37,7 @@ import {
 import { AiVideo } from '@gitroom/frontend/components/launches/ai.video';
 import { useModals } from '@gitroom/frontend/components/layout/new-modal';
 import { Dashboard } from '@uppy/react';
+import { MediaFoldersSidebar } from '@gitroom/frontend/components/media/media.folders';
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
@@ -115,6 +116,36 @@ export const Pagination: FC<{
     </ul>
   );
 };
+const MoveToFolderControl: FC<{
+  media: any;
+  moveToFolder: (folderId: string) => void;
+}> = ({ media, moveToFolder }) => {
+  const fetch = useFetch();
+  const t = useT();
+  const loadFolders = useCallback(async () => {
+    return (await fetch('/media/folders')).json();
+  }, []);
+  const { data: folders } = useSWR('get-media-folders', loadFolders);
+  if (!folders?.length) return null;
+  return (
+    <select
+      value={media.folderId || ''}
+      onClick={(e) => e.stopPropagation()}
+      onChange={(e) => {
+        e.stopPropagation();
+        moveToFolder(e.target.value);
+      }}
+      className="absolute top-[5px] start-[5px] z-[100] hidden group-hover:block text-[10px] bg-black/60 text-white rounded-[4px] outline-none max-w-[80px]"
+    >
+      <option value="">{t('no_folder', 'No folder')}</option>
+      {folders.map((folder: any) => (
+        <option key={folder.id} value={folder.id}>
+          {folder.name}
+        </option>
+      ))}
+    </select>
+  );
+};
 export const ShowMediaBoxModal: FC = () => {
   const [showModal, setShowModal] = useState(false);
   const [callBack, setCallBack] =
@@ -152,12 +183,34 @@ export const MediaBox: FC<{
   closeModal: () => void;
 }> = ({ type, standalone, setMedia }) => {
   const [page, setPage] = useState(0);
+  const [selectedFolder, setSelectedFolder] = useState<string | undefined>();
   const fetch = useFetch();
   const modals = useModals();
   const loadMedia = useCallback(async () => {
-    return (await fetch(`/media?page=${page + 1}`)).json();
-  }, [page]);
-  const { data, mutate, isLoading } = useSWR(`get-media-${page}`, loadMedia);
+    const params = new URLSearchParams({ page: String(page + 1) });
+    if (selectedFolder) {
+      params.set('folderId', selectedFolder);
+    }
+    return (await fetch(`/media?${params.toString()}`)).json();
+  }, [page, selectedFolder]);
+  const { data, mutate, isLoading } = useSWR(
+    `get-media-${page}-${selectedFolder}`,
+    loadMedia
+  );
+  const changeFolder = useCallback((folderId?: string) => {
+    setPage(0);
+    setSelectedFolder(folderId);
+  }, []);
+  const moveToFolder = useCallback(
+    (media: any) => async (folderId: string) => {
+      await fetch('/media/move', {
+        method: 'POST',
+        body: JSON.stringify({ id: media.id, folderId: folderId || undefined }),
+      });
+      mutate();
+    },
+    [mutate]
+  );
   const [selected, setSelected] = useState([]);
   const t = useT();
   const uploaderRef = useRef<any>(null);
@@ -276,7 +329,11 @@ export const MediaBox: FC<{
   }, []);
 
   return (
-    <DropFiles className="flex flex-col flex-1" onDrop={dragAndDrop}>
+    <DropFiles className="flex flex-row flex-1" onDrop={dragAndDrop}>
+      <MediaFoldersSidebar
+        selectedFolder={selectedFolder}
+        setSelectedFolder={changeFolder}
+      />
       <div className="flex flex-col flex-1">
         <div
           className={clsx(
@@ -394,6 +451,10 @@ export const MediaBox: FC<{
                         onClick={deleteImage(media)}
                       />
                     )}
+                    <MoveToFolderControl
+                      media={media}
+                      moveToFolder={moveToFolder(media)}
+                    />
                     <div className="w-full h-full rounded-[6px] overflow-hidden">
                       {media.path.indexOf('mp4') > -1 ? (
                         <VideoFrame url={mediaDirectory.set(media.path)} />
