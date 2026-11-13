@@ -1,0 +1,66 @@
+name: Auto merge
+
+# Sweeps open PRs and merges those with no conflict and a green CI gate
+# (docs/auto-merge.md). Runs the script from the BASE branch, so a PR cannot
+# change the rules that merge it.
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened, ready_for_review]
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+  push:
+    branches: ['kisspeter/v2.11.0']
+  schedule:
+    - cron: "17 6,18 * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Report what would be merged, merge nothing"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  checks: read
+  statuses: read
+  actions: write
+
+concurrency:
+  group: auto-merge
+  cancel-in-progress: false
+
+jobs:
+  sweep:
+    runs-on: [self-hosted, mac-mini]
+    timeout-minutes: 20
+    steps:
+      - name: Ensure gh
+        run: |
+          set -euo pipefail
+          if ! command -v gh >/dev/null; then
+            v=2.101.0
+            curl -fsSL -o "$RUNNER_TEMP/gh.zip" "https://github.com/cli/cli/releases/download/v${v}/gh_${v}_macOS_arm64.zip"
+            unzip -q -o "$RUNNER_TEMP/gh.zip" -d "$RUNNER_TEMP"
+            echo "$RUNNER_TEMP/gh_${v}_macOS_arm64/bin" >> "$GITHUB_PATH"
+          fi
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+      - name: Sweep the open pull requests
+        env:
+          GH_TOKEN: ${{ secrets.AUTOMERGE_TOKEN || secrets.GITHUB_TOKEN }}
+          AUTOMERGE_TOKEN_SOURCE: ${{ secrets.AUTOMERGE_TOKEN && 'pat' || 'bot' }}
+          AUTOMERGE_BASE_BRANCH: kisspeter/v2.11.0
+          AUTOMERGE_MERGE_METHOD: merge
+          AUTOMERGE_REQUIRED_CHECKS: gate
+          AUTOMERGE_ADVISORY_CHECKS: ""
+          AUTOMERGE_IGNORED_CHECKS: sweep
+          AUTOMERGE_BLOCK_LABELS: automerge:block,needs-human
+          AUTOMERGE_BLOCKED_PATHS: .github/
+          AUTOMERGE_REQUIRE_MAIN_GREEN: ${{ vars.AUTOMERGE_REQUIRE_MAIN_GREEN || 'true' }}
+          AUTOMERGE_DRY_RUN: ${{ inputs.dry_run && 'true' || 'false' }}
+        run: .github/scripts/auto-merge-sweep.sh

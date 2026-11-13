@@ -1,0 +1,80 @@
+name: CI
+
+# Tests only. Nothing is built for publication and nothing is published.
+# run-name keeps a dispatch for a PR merge ref apart from the base-branch gate
+# (.github/scripts/auto-merge-sweep.sh drop_merge_ref_checks).
+run-name: "${{ inputs.pr_number && format('CI [merge-ref #{0}]', inputs.pr_number) || 'CI' }}"
+
+on:
+  push:
+    branches: ['kisspeter/v2.11.0']
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: "PR number: test the PR head merged with main_sha"
+        required: false
+        type: string
+        default: ""
+      main_sha:
+        description: "base branch commit to merge into the PR head (with pr_number)"
+        required: false
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+  statuses: write
+  pull-requests: read
+
+concurrency:
+  group: ci-${{ github.ref == 'refs/heads/kisspeter/v2.11.0' && github.sha || github.ref }}-${{ inputs.pr_number || '' }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/kisspeter/v2.11.0' }}
+
+env:
+  CI: "true"
+
+jobs:
+  gate:
+    runs-on: [self-hosted, mac-mini]
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.pr_number && format('refs/pull/{0}/head', inputs.pr_number) || '' }}
+          fetch-depth: ${{ inputs.pr_number && '0' || '1' }}
+      - name: Merge the base branch into the PR head
+        id: merge
+        if: ${{ inputs.pr_number != '' }}
+        env:
+          PR_NUMBER: ${{ inputs.pr_number }}
+          MAIN_SHA: ${{ inputs.main_sha }}
+        run: |
+          echo "tested_head=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          if ! [[ "$MAIN_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::main_sha must be a full commit SHA (got '$MAIN_SHA')"; exit 1
+          fi
+          git cat-file -e "${MAIN_SHA}^{commit}" 2>/dev/null || git fetch --no-tags origin 'kisspeter/v2.11.0'
+          if ! git -c user.name=ci -c user.email=ci@localhost merge --no-edit "$MAIN_SHA"; then
+            echo "::error::PR #$PR_NUMBER does not merge cleanly with $MAIN_SHA"; exit 1
+          fi
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test
+      - name: Report the merge-ref verdict
+        if: ${{ always() && github.event_name == 'workflow_dispatch' && inputs.pr_number != '' && job.status != 'cancelled' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          JOB_STATUS: ${{ job.status }}
+          TESTED_HEAD: ${{ steps.merge.outputs.tested_head }}
+          MAIN_SHA: ${{ inputs.main_sha }}
+        run: |
+          [ -n "$TESTED_HEAD" ] || { echo "::error::no PR head checked out"; exit 1; }
+          state=success; [ "$JOB_STATUS" = success ] || state=failure
+          gh api --method POST "repos/$GITHUB_REPOSITORY/statuses/$TESTED_HEAD" \
+            -f state="$state" -f context="automerge/merge-ref" \
+            -f description="head $TESTED_HEAD main $MAIN_SHA"
