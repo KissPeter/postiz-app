@@ -7,6 +7,7 @@ import {
 } from '@gitroom/nestjs-libraries/integrations/social/social.integrations.interface';
 import { makeId } from '@gitroom/nestjs-libraries/services/make.is';
 import { timer } from '@gitroom/helpers/utils/timer';
+import { waitCommentDelay } from '@gitroom/helpers/utils/comment.delay';
 import dayjs from 'dayjs';
 import { SocialAbstract } from '@gitroom/nestjs-libraries/integrations/social.abstract';
 import { InstagramDto } from '@gitroom/nestjs-libraries/dtos/posts/providers-settings/instagram.dto';
@@ -624,6 +625,7 @@ export class InstagramProvider
     }
 
     for (const post of theRest) {
+      await waitCommentDelay(post.delay);
       const { id: commentId } = await (
         await this.fetch(
           `https://${type}/v20.0/${containerIdGlobal}/comments?message=${encodeURIComponent(

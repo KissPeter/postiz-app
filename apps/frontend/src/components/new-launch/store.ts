@@ -12,6 +12,7 @@ interface Values {
   id: string;
   content: string;
   media: { id: string; path: string; thumbnail?: string }[];
+  delay?: number;
 }
 
 interface Internal {
@@ -63,6 +64,12 @@ interface StoreState {
     direction: 'up' | 'down'
   ) => void;
   setGlobalValueText: (index: number, content: string) => void;
+  setGlobalValueDelay: (index: number, delay: number) => void;
+  setInternalValueDelay: (
+    integrationId: string,
+    index: number,
+    delay: number
+  ) => void;
   setGlobalValueMedia: (
     index: number,
     media: { id: string; path: string }[]
@@ -326,6 +333,25 @@ export const useLaunchStore = create<StoreState>()((set) => ({
         }),
       };
     }),
+  setGlobalValueDelay: (index: number, delay: number) =>
+    set((state) => ({
+      global: state.global.map((item, i) =>
+        i === index ? { ...item, delay } : item
+      ),
+    })),
+  setInternalValueDelay: (integrationId: string, index: number, delay: number) =>
+    set((state) => ({
+      internal: state.internal.map((item) =>
+        item.integration.id === integrationId
+          ? {
+              ...item,
+              integrationValue: item.integrationValue.map((v, i) =>
+                i === index ? { ...v, delay } : v
+              ),
+            }
+          : item
+      ),
+    })),
   setGlobalValueText: (index: number, content: string) =>
     set((state) => ({
       global: state.global.map((item, i) =>

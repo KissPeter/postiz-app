@@ -156,6 +156,7 @@ export const AddEditModalInnerInner: FC<AddEditModalProps> = (props) => {
                   .map((line: string) => `<p>${line}</p>`)
                   .join(''),
           id: post.id,
+          delay: post.delay || 0,
           // @ts-ignore
           media: post.image as any[],
         }))

@@ -26,6 +26,10 @@ import {
   useLaunchStore,
 } from '@gitroom/frontend/components/new-launch/store';
 import { useShallow } from 'zustand/react/shallow';
+import {
+  DelayComponent,
+  DELAYED_COMMENT_PROVIDERS,
+} from '@gitroom/frontend/components/new-launch/delay.component';
 import { AddPostButton } from '@gitroom/frontend/components/new-launch/add.post.button';
 import { MultiMediaComponent } from '@gitroom/frontend/components/media/media.component';
 import { UpDownArrow } from '@gitroom/frontend/components/launches/up.down.arrow';
@@ -103,6 +107,8 @@ export const EditorWrapper: FC<{
   const {
     setGlobalValueText,
     setInternalValueText,
+    setGlobalValueDelay,
+    setInternalValueDelay,
     addRemoveInternal,
     internal,
     global,
@@ -139,6 +145,8 @@ export const EditorWrapper: FC<{
       dummy: state.dummy,
       setInternalValueText: state.setInternalValueText,
       setGlobalValueText: state.setGlobalValueText,
+      setGlobalValueDelay: state.setGlobalValueDelay,
+      setInternalValueDelay: state.setInternalValueDelay,
       addInternalValue: state.addInternalValue,
       addGlobalValue: state.addGlobalValue,
       setGlobalValueMedia: state.setGlobalValueMedia,
@@ -236,6 +244,29 @@ export const EditorWrapper: FC<{
     },
     [current, global, internal]
   );
+
+  const changeDelay = useCallback(
+    (index: number) => (delay: number) => {
+      if (internal) {
+        return setInternalValueDelay(current, index, delay);
+      }
+
+      return setGlobalValueDelay(index, delay);
+    },
+    [current, global, internal]
+  );
+
+  const supportsDelay = useMemo(() => {
+    if (internal) {
+      return DELAYED_COMMENT_PROVIDERS.includes(
+        internalFromAll?.identifier || ''
+      );
+    }
+
+    return (selectedIntegration || []).some((s) =>
+      DELAYED_COMMENT_PROVIDERS.includes(s.integration?.identifier)
+    );
+  }, [internal, internalFromAll, selectedIntegration]);
 
   const changeImages = useCallback(
     (index: number) => (value: any[]) => {
@@ -402,6 +433,9 @@ export const EditorWrapper: FC<{
             !canEdit && !isCreateSet && 'blur-s'
           )}
         >
+          {index > 0 && supportsDelay && canEdit && (
+            <DelayComponent value={g.delay} onChange={changeDelay(index)} />
+          )}
           <div className="flex gap-[5px] flex-1 w-full">
             <div className="flex-1 flex w-full">
               {index > 0 && (
