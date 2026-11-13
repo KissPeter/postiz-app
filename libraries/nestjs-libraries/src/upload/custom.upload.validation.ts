@@ -1,37 +1,41 @@
-import {
-  BadRequestException,
-  FileTypeValidator,
-  Injectable,
-  MaxFileSizeValidator,
-  ParseFilePipe,
-  PipeTransform,
-} from '@nestjs/common';
+import { BadRequestException, Injectable, PipeTransform } from '@nestjs/common';
+import { detectMedia } from './media.sniff';
 
 @Injectable()
 export class CustomFileValidationPipe implements PipeTransform {
   async transform(value: any) {
     if (!value) {
-      throw 'No file provided.';
+      throw new BadRequestException('No file provided.');
     }
 
-    if (!value.mimetype) {
+    // Only multer file objects are validated; other parameters pass through.
+    // The presence of the buffer is checked, not the client's mimetype, so a
+    // file sent without a mimetype cannot skip validation.
+    if (
+      typeof value !== 'object' ||
+      !('buffer' in value || 'fieldname' in value || 'originalname' in value)
+    ) {
       return value;
     }
 
-    // Set the maximum file size based on the MIME type
-    const maxSize = this.getMaxSize(value.mimetype);
-    const validation =
-      (value.mimetype.startsWith('image/') ||
-        value.mimetype.startsWith('video/mp4')) &&
-      value.size <= maxSize;
-
-    if (validation) {
-      return value;
+    if (!Buffer.isBuffer(value.buffer)) {
+      throw new BadRequestException('Invalid file upload.');
     }
 
-    throw new BadRequestException(
-      `File size exceeds the maximum allowed size of ${maxSize} bytes.`
-    );
+    const detected = detectMedia(value.buffer);
+    if (!detected) {
+      throw new BadRequestException('Unsupported file type.');
+    }
+
+    const maxSize = this.getMaxSize(detected.mime);
+    if (value.size > maxSize) {
+      throw new BadRequestException(
+        `File size exceeds the maximum allowed size of ${maxSize} bytes.`
+      );
+    }
+
+    value.mimetype = detected.mime;
+    return value;
   }
 
   private getMaxSize(mimeType: string): number {
