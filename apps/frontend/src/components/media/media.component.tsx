@@ -54,6 +54,7 @@ import { useLaunchStore } from '@gitroom/frontend/components/new-launch/store';
 import { useShallow } from 'zustand/react/shallow';
 import { LoadingComponent } from '@gitroom/frontend/components/layout/loading';
 import { useDebounce } from 'use-debounce';
+import { MediaFoldersSidebar } from '@gitroom/frontend/components/media/media.folders';
 const Polonto = dynamic(
   () => import('@gitroom/frontend/components/launches/polonto')
 );
@@ -179,6 +180,36 @@ export const Pagination: FC<{
     </ul>
   );
 };
+const MoveToFolderControl: FC<{
+  media: any;
+  moveToFolder: (folderId: string) => void;
+}> = ({ media, moveToFolder }) => {
+  const fetch = useFetch();
+  const t = useT();
+  const loadFolders = useCallback(async () => {
+    return (await fetch('/media/folders')).json();
+  }, []);
+  const { data: folders } = useSWR('get-media-folders', loadFolders);
+  if (!folders?.length) return null;
+  return (
+    <select
+      value={media.folderId || ''}
+      onClick={(e) => e.stopPropagation()}
+      onChange={(e) => {
+        e.stopPropagation();
+        moveToFolder(e.target.value);
+      }}
+      className="absolute top-[5px] start-[5px] z-[100] hidden group-hover:block text-[10px] bg-black/60 text-white rounded-[4px] outline-none max-w-[80px]"
+    >
+      <option value="">{t('no_folder', 'No folder')}</option>
+      {folders.map((folder: any) => (
+        <option key={folder.id} value={folder.id}>
+          {folder.name}
+        </option>
+      ))}
+    </select>
+  );
+};
 export const ShowMediaBoxModal: FC = () => {
   const modals = useModals();
   const t = useT();
@@ -221,22 +252,36 @@ export const MediaBox: FC<{
   const [page, setPage] = useState(0);
   const [search, setSearch] = useState('');
   const [debouncedSearch] = useDebounce(search, 300);
+  const [selectedFolder, setSelectedFolder] = useState<string | undefined>();
   const fetch = useFetch();
   const modals = useModals();
   const toaster = useToaster();
   useEffect(() => {
     setPage(0);
-  }, [debouncedSearch]);
+  }, [debouncedSearch, selectedFolder]);
   const loadMedia = useCallback(async () => {
     const params = new URLSearchParams({ page: String(page + 1) });
     if (debouncedSearch.trim()) {
       params.set('search', debouncedSearch.trim());
     }
+    if (selectedFolder) {
+      params.set('folderId', selectedFolder);
+    }
     return (await fetch(`/media?${params.toString()}`)).json();
-  }, [page, debouncedSearch]);
+  }, [page, debouncedSearch, selectedFolder]);
   const { data, mutate, isLoading } = useSWR(
-    `get-media-${page}-${debouncedSearch}`,
+    `get-media-${page}-${debouncedSearch}-${selectedFolder}`,
     loadMedia
+  );
+  const moveToFolder = useCallback(
+    (media: any) => async (folderId: string) => {
+      await fetch('/media/move', {
+        method: 'POST',
+        body: JSON.stringify({ id: media.id, folderId: folderId || undefined }),
+      });
+      mutate();
+    },
+    [mutate]
   );
   const [selected, setSelected] = useState([]);
   const t = useT();
@@ -472,7 +517,11 @@ export const MediaBox: FC<{
   }, [t, loading]);
 
   return (
-    <DropFiles disabled={loading} className="flex flex-col flex-1" onDrop={dragAndDrop}>
+    <DropFiles disabled={loading} className="flex flex-row flex-1" onDrop={dragAndDrop}>
+      <MediaFoldersSidebar
+        selectedFolder={selectedFolder}
+        setSelectedFolder={setSelectedFolder}
+      />
       <div className="flex flex-col flex-1">
         <div
           className={clsx(
@@ -656,6 +705,10 @@ export const MediaBox: FC<{
                     >
                       {media.originalName}
                     </div>
+                    <MoveToFolderControl
+                      media={media}
+                      moveToFolder={moveToFolder(media)}
+                    />
                     <div className="w-full h-full rounded-[6px] overflow-hidden relative">
                       <div className="absolute z-[20] left-[50%] top-[50%] -translate-x-[50%] -translate-y-[50%]">
                         <div

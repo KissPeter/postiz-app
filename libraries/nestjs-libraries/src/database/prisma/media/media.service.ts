@@ -5,6 +5,8 @@ import { generationError } from '@gitroom/nestjs-libraries/openai/generation.err
 import { SubscriptionService } from '@gitroom/nestjs-libraries/database/prisma/subscriptions/subscription.service';
 import { Organization } from '@prisma/client';
 import { SaveMediaInformationDto } from '@gitroom/nestjs-libraries/dtos/media/save.media.information.dto';
+import { CreateMediaFolderDto } from '@gitroom/nestjs-libraries/dtos/media/create.media.folder.dto';
+import { RenameMediaFolderDto } from '@gitroom/nestjs-libraries/dtos/media/rename.media.folder.dto';
 import { VideoManager } from '@gitroom/nestjs-libraries/videos/video.manager';
 import { VideoDto } from '@gitroom/nestjs-libraries/dtos/videos/video.dto';
 import { UploadFactory } from '@gitroom/nestjs-libraries/upload/upload.factory';
@@ -491,8 +493,28 @@ export class MediaService {
     );
   }
 
-  getMedia(org: string, page: number, search?: string) {
-    return this._mediaRepository.getMedia(org, page, search);
+  getMedia(org: string, page: number, search?: string, folderId?: string) {
+    return this._mediaRepository.getMedia(org, page, search, folderId);
+  }
+
+  getFolders(org: string) {
+    return this._mediaRepository.getFolders(org);
+  }
+
+  createFolder(org: string, data: CreateMediaFolderDto) {
+    return this._mediaRepository.createFolder(org, data);
+  }
+
+  renameFolder(org: string, id: string, data: RenameMediaFolderDto) {
+    return this._mediaRepository.renameFolder(org, id, data);
+  }
+
+  deleteFolder(org: string, id: string) {
+    return this._mediaRepository.deleteFolder(org, id);
+  }
+
+  moveMedia(org: string, id: string, folderId?: string) {
+    return this._mediaRepository.moveMedia(org, id, folderId);
   }
 
   saveMediaInformation(org: string, data: SaveMediaInformationDto) {
