@@ -1,5 +1,4 @@
 import { randomInt } from 'crypto';
-import { randomInt } from 'crypto';
 import { IUploadProvider } from './upload.interface';
 import { mkdirSync, unlink, writeFileSync } from 'fs';
 // @ts-ignore
