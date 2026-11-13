@@ -20,9 +20,7 @@ import { useSettings } from '@gitroom/frontend/components/launches/helpers/use.v
 import EventEmitter from 'events';
 import clsx from 'clsx';
 import { VideoFrame } from '@gitroom/react/helpers/video.frame';
-import {
-  useUppyUploader,
-} from '@gitroom/frontend/components/media/new.uploader';
+import { useUppyUploader } from '@gitroom/frontend/components/media/new.uploader';
 import dynamic from 'next/dynamic';
 import { useUser } from '@gitroom/frontend/components/layout/user.context';
 import { AiImage } from '@gitroom/frontend/components/launches/ai.image';
@@ -31,9 +29,7 @@ import { deleteDialog } from '@gitroom/react/helpers/delete.dialog';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
 import { ThirdPartyMedia } from '@gitroom/frontend/components/third-parties/third-party.media';
 import { ReactSortable } from 'react-sortablejs';
-import {
-  MediaComponentInner,
-} from '@gitroom/frontend/components/launches/helpers/media.settings.component';
+import { MediaComponentInner } from '@gitroom/frontend/components/launches/helpers/media.settings.component';
 import { AiVideo } from '@gitroom/frontend/components/launches/ai.video';
 import { useModals } from '@gitroom/frontend/components/layout/new-modal';
 import { Dashboard } from '@uppy/react';
@@ -212,6 +208,11 @@ export const MediaBox: FC<{
     [mutate]
   );
   const [selected, setSelected] = useState([]);
+  const [search, setSearch] = useState('');
+  const [sortBy, setSortBy] = useState<
+    'newest' | 'oldest' | 'name-asc' | 'name-desc' | 'size-desc' | 'size-asc'
+  >('newest');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const t = useT();
   const uploaderRef = useRef<any>(null);
   const mediaDirectory = useMediaDirectory();
@@ -316,6 +317,60 @@ export const MediaBox: FC<{
     [mutate]
   );
 
+  const deleteSelected = useCallback(async () => {
+    if (
+      !(await deleteDialog(
+        t(
+          'are_you_sure_you_want_to_delete_selected_media',
+          'Are you sure you want to delete the selected media?'
+        )
+      ))
+    ) {
+      return;
+    }
+    for (const media of selected as any[]) {
+      await fetch(`/media/${media.id}`, {
+        method: 'DELETE',
+      });
+    }
+    setSelected([]);
+    mutate();
+  }, [selected, mutate]);
+
+  // Search and sort run on the page already loaded (the list endpoint has no
+  // server-side search or sort), so they only reorder/filter the current page.
+  const visibleMedia = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    const list = (data?.results || [])
+      .filter((f: any) => {
+        if (type === 'video') {
+          return f.path.indexOf('mp4') > -1;
+        } else if (type === 'image') {
+          return f.path.indexOf('mp4') === -1;
+        }
+        return true;
+      })
+      .filter((f: any) => !q || (f.name || '').toLowerCase().includes(q));
+    const time = (m: any) => new Date(m.createdAt || 0).getTime();
+    list.sort((a: any, b: any) => {
+      switch (sortBy) {
+        case 'oldest':
+          return time(a) - time(b);
+        case 'name-asc':
+          return (a.name || '').localeCompare(b.name || '');
+        case 'name-desc':
+          return (b.name || '').localeCompare(a.name || '');
+        case 'size-desc':
+          return (b.fileSize || 0) - (a.fileSize || 0);
+        case 'size-asc':
+          return (a.fileSize || 0) - (b.fileSize || 0);
+        default:
+          return time(b) - time(a);
+      }
+    });
+    return list;
+  }, [data?.results, type, search, sortBy]);
+
   const btn = useMemo(() => {
     return (
       <button
@@ -356,6 +411,60 @@ export const MediaBox: FC<{
           />
           {!isLoading && !!data?.results?.length && btn}
         </div>
+        {!isLoading && !!data?.results?.length && (
+          <div className="flex flex-wrap items-center gap-[8px] mt-[5px]">
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder={t('search_media_by_name', 'Search by file name')}
+              className="h-[40px] flex-1 min-w-[160px] px-[12px] rounded-[8px] bg-newBgColorInner border border-newTextColor/10 outline-none"
+            />
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as any)}
+              aria-label={t('sort_by', 'Sort by')}
+              className="h-[40px] px-[8px] rounded-[8px] bg-newBgColorInner border border-newTextColor/10 outline-none"
+            >
+              <option value="newest">{t('sort_newest', 'Newest')}</option>
+              <option value="oldest">{t('sort_oldest', 'Oldest')}</option>
+              <option value="name-asc">
+                {t('sort_name_asc', 'Name (A-Z)')}
+              </option>
+              <option value="name-desc">
+                {t('sort_name_desc', 'Name (Z-A)')}
+              </option>
+              <option value="size-desc">
+                {t('sort_size_desc', 'Size (Largest)')}
+              </option>
+              <option value="size-asc">
+                {t('sort_size_asc', 'Size (Smallest)')}
+              </option>
+            </select>
+            <div className="flex h-[40px] rounded-[8px] border border-newTextColor/10 overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setViewMode('grid')}
+                className={clsx(
+                  'px-[12px] cursor-pointer',
+                  viewMode === 'grid' ? 'bg-forth text-white' : 'text-textColor'
+                )}
+              >
+                {t('view_grid', 'Grid')}
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('list')}
+                className={clsx(
+                  'px-[12px] cursor-pointer',
+                  viewMode === 'list' ? 'bg-forth text-white' : 'text-textColor'
+                )}
+              >
+                {t('view_list', 'List')}
+              </button>
+            </div>
+          </div>
+        )}
         <div className="w-full pointer-events-none relative mt-[5px] mb-[5px]">
           <div className="w-full h-[46px] overflow-hidden absolute left-0 bg-newBgColorInner uppyChange">
             <Dashboard
@@ -415,16 +524,68 @@ export const MediaBox: FC<{
                 ))}
               </>
             )}
-            {data?.results
-              ?.filter((f: any) => {
-                if (type === 'video') {
-                  return f.path.indexOf('mp4') > -1;
-                } else if (type === 'image') {
-                  return f.path.indexOf('mp4') === -1;
-                }
-                return true;
-              })
-              .map((media: any) => (
+            {!isLoading && !!data?.results?.length && !visibleMedia.length && (
+              <div className="text-newTextColor/[0.6]">
+                {t('no_media_match_search', 'No media matches your search')}
+              </div>
+            )}
+            {viewMode === 'list' && !isLoading && (
+              <div className="flex flex-col gap-[6px] w-full p-[2px]">
+                {visibleMedia.map((media: any) => {
+                  const isSelected = selected.some(
+                    (p: any) => p.id === media.id
+                  );
+                  return (
+                    <div
+                      key={media.id}
+                      onClick={addRemoveSelected(media)}
+                      className={clsx(
+                        'group flex items-center gap-[12px] p-[6px] rounded-[8px] border-[2px]',
+                        !standalone && 'cursor-pointer',
+                        isSelected
+                          ? 'border-[#612BD3]'
+                          : 'border-transparent hover:bg-newSep'
+                      )}
+                    >
+                      <div className="w-[48px] h-[48px] shrink-0 rounded-[6px] overflow-hidden">
+                        {media.path.indexOf('mp4') > -1 ? (
+                          <VideoFrame url={mediaDirectory.set(media.path)} />
+                        ) : (
+                          <img
+                            width="100%"
+                            height="100%"
+                            className="w-full h-full object-cover"
+                            src={mediaDirectory.set(media.path)}
+                            alt="media"
+                          />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="truncate text-[14px]">{media.name}</div>
+                        <div className="text-[12px] text-newTextColor/[0.6]">
+                          {formatBytes(media.fileSize)} ·{' '}
+                          {new Date(media.createdAt).toLocaleDateString()}
+                        </div>
+                      </div>
+                      {isSelected && (
+                        <div className="flex justify-center items-center text-[14px] font-[500] w-[24px] h-[24px] rounded-full bg-[#612BD3]">
+                          {selected.findIndex((z: any) => z.id === media.id) +
+                            1}
+                        </div>
+                      )}
+                      {!standalone && !isSelected && (
+                        <DeleteCircleIcon
+                          className="cursor-pointer shrink-0"
+                          onClick={deleteImage(media)}
+                        />
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            {viewMode === 'grid' &&
+              visibleMedia.map((media: any) => (
                 <div
                   className={clsx(
                     'group px-[3px] py-[3px] float-left rounded-[6px] w8-max aspect-square',
@@ -442,7 +603,7 @@ export const MediaBox: FC<{
                     onClick={addRemoveSelected(media)}
                   >
                     {!!selected.find((p: any) => p.id === media.id) ? (
-                      <div className="flex justify-center items-center text-[14px] font-[500] w-[24px] h-[24px] rounded-full bg-[#612BD3] absolute -bottom-[10px] -end-[10px]">
+                      <div className="flex justify-center items-center text-[14px] font-[500] w-[24px] h-[24px] rounded-full bg-[#612BD3] absolute -bottom-[10px] -end-[10px] z-[10]">
                         {selected.findIndex((z: any) => z.id === media.id) + 1}
                       </div>
                     ) : (
@@ -468,6 +629,12 @@ export const MediaBox: FC<{
                         />
                       )}
                     </div>
+                    <div
+                      className="absolute bottom-0 inset-x-0 px-[6px] py-[2px] text-[11px] text-white truncate bg-black/60 rounded-b-[6px]"
+                      title={media.name}
+                    >
+                      {media.name}
+                    </div>
                   </div>
                 </div>
               ))}
@@ -488,6 +655,14 @@ export const MediaBox: FC<{
             >
               Cancel
             </button>
+            {!standalone && selected.length > 0 && (
+              <button
+                onClick={deleteSelected}
+                className="cursor-pointer h-[52px] px-[20px] items-center justify-center border border-red-500/60 text-red-400 flex rounded-[10px]"
+              >
+                {t('delete_selected', 'Delete selected')} ({selected.length})
+              </button>
+            )}
             {!isLoading && !!data?.results?.length && (
               <button
                 onClick={standalone ? () => {} : addMedia}
@@ -503,6 +678,12 @@ export const MediaBox: FC<{
     </DropFiles>
   );
 };
+const formatBytes = (n: number) =>
+  n >= 1048576
+    ? `${(n / 1048576).toFixed(1)} MB`
+    : n >= 1024
+    ? `${Math.round(n / 1024)} KB`
+    : `${n} B`;
 export const MultiMediaComponent: FC<{
   label: string;
   description: string;
