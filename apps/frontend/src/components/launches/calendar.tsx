@@ -92,11 +92,12 @@ export const days = [
   'Saturday',
   'Sunday',
 ];
+// Local patch: week view limited to 08:00-20:00 (hours 8 through 20 inclusive, 13 rows).
 export const hours = Array.from(
   {
-    length: 24,
+    length: 13,
   },
-  (_, i) => i
+  (_, i) => i + 8
 );
 export const DayView = () => {
   const calendar = useCalendar();
