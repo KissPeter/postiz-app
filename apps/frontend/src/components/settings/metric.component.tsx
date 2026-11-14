@@ -26,7 +26,6 @@ const MetricComponent = () => {
 
   const changeTimezone = (event: React.ChangeEvent<HTMLSelectElement>) => {
     const value = event.target.value;
-    console.log(value);
     setTimezone(value);
     localStorage.setItem('timezone', value);
     dayjs.tz.setDefault(value);
@@ -46,23 +45,23 @@ const MetricComponent = () => {
         ))}
       </Select>
 
-      {/*<div className="mt-[4px]">Current Timezone</div>*/}
-      {/*<Select*/}
-      {/*  name="timezone"*/}
-      {/*  disableForm={true}*/}
-      {/*  label=""*/}
-      {/*  onChange={changeTimezone}*/}
-      {/*>*/}
-      {/*  {timezones.map((metric) => (*/}
-      {/*    <option*/}
-      {/*      key={metric.name}*/}
-      {/*      value={metric.tzCode}*/}
-      {/*      selected={metric.tzCode === timezone}*/}
-      {/*    >*/}
-      {/*      {metric.label}*/}
-      {/*    </option>*/}
-      {/*  ))}*/}
-      {/*</Select>*/}
+      <div className="mt-[4px]">Current Timezone</div>
+      <Select
+        name="timezone"
+        disableForm={true}
+        label=""
+        onChange={changeTimezone}
+      >
+        {timezones.map((metric) => (
+          <option
+            key={metric.name}
+            value={metric.tzCode}
+            selected={metric.tzCode === timezone}
+          >
+            {metric.label}
+          </option>
+        ))}
+      </Select>
     </div>
   );
 };
