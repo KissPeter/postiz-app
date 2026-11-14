@@ -64,12 +64,15 @@ Run it in the background; it takes 5-10 min. Success = `BUILD_EXIT=0` and the im
   (5500m was OOMKilled during the Next.js lint/type-check step). Rollback target is now kp3.
   Known nit: the kp4 image checks for the literal text "backslash-u-F-F-F-D" instead of the replacement character in
   `original.name.ts`, so a name that is genuinely Latin-1 (not UTF-8) would be shown garbled. Fixed in the fork
-  and local source afterwards; picked up by the next rebuild (kp5).
+  and local source afterwards; shipped in kp5 (2026-11-14, built with the Docker VM otherwise empty:
+  `docker stop $(docker ps -q)` first, then `--memory=7500m`; 5500m and 6500m were OOMKilled in the type-check step
+  when other containers were running). Restart order afterwards: fundvista-redis, then the rest.
+  kp5 = kp4 + corrected `original.name.ts`; rollback target is kp4 (`compose.yml.bak.kp4`).
 - When pushing files to GitHub through the MCP `push_files`, backslash-u escapes in the content get turned into the
   literal characters; verify with `git hash-object <file>` against the blob SHA from `get_file_contents`.
 
 ## Deploy
-1. Edit `compose.yml`: `image: postiz-app:v2.11.0-kp4` (current; keep a `.bak` copy; keep the old image for rollback).
+1. Edit `compose.yml`: `image: postiz-app:v2.11.0-kp5` (current; keep a `.bak` copy; keep the old image for rollback).
 2. `cd /Users/kissp/srv/postiz && docker compose up -d postiz`
 3. Startup runs `pm2 delete all; prisma db push; pm2 ...` (package.json `pm2-run`). `db push` is additive
    here (new media-folder tables, `Post.delay` column default 0); it refuses destructive changes.
@@ -82,5 +85,5 @@ Run it in the background; it takes 5-10 min. Success = `BUILD_EXIT=0` and the im
 6. Restart stopped CI runners: `docker start gha-runner-1 gha-runner-2 gha-runner-3 gha-runner-4 gha-runner-5`.
 
 ## Rollback
-Set `image:` back to `postiz-app:v2.11.0-kp3` (kp3 is the rollback target since kp4) and `docker compose up -d postiz`. The new DB table/column
+Set `image:` back to `postiz-app:v2.11.0-kp4` (kp4 is the rollback target since kp5) and `docker compose up -d postiz`. The new DB table/column
 are harmless to the old image.
