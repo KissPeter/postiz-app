@@ -18,7 +18,10 @@ import { GetOrgFromRequest } from '@gitroom/nestjs-libraries/user/org.from.reque
 import { Organization } from '@prisma/client';
 import { MediaService } from '@gitroom/nestjs-libraries/database/prisma/media/media.service';
 import { ApiTags } from '@nestjs/swagger';
-import handleR2Upload from '@gitroom/nestjs-libraries/upload/r2.uploader';
+import handleR2Upload, {
+  getStoredOriginalName,
+} from '@gitroom/nestjs-libraries/upload/r2.uploader';
+import { cleanOriginalName } from '@gitroom/nestjs-libraries/upload/original.name';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { CustomFileValidationPipe } from '@gitroom/nestjs-libraries/upload/custom.upload.validation';
 import { SubscriptionService } from '@gitroom/nestjs-libraries/database/prisma/subscriptions/subscription.service';
@@ -100,7 +103,8 @@ export class MediaController {
     return this._mediaService.saveFile(
       org.id,
       uploadedFile.originalname,
-      uploadedFile.path
+      uploadedFile.path,
+      cleanOriginalName(file.originalname)
     );
   }
 
@@ -154,7 +158,8 @@ export class MediaController {
     return this._mediaService.saveFile(
       org.id,
       getFile.originalname,
-      getFile.path
+      getFile.path,
+      cleanOriginalName(file.originalname)
     );
   }
 
@@ -209,7 +214,8 @@ export class MediaController {
       org.id,
       name,
       // @ts-ignore
-      upload.Location
+      upload.Location,
+      await getStoredOriginalName(name)
     );
 
     res.status(200).json({ ...upload, saved: saveFile });

@@ -6,6 +6,7 @@ import {
   CompleteMultipartUploadCommand,
   AbortMultipartUploadCommand,
   PutObjectCommand,
+  HeadObjectCommand,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { Request, Response } from 'express';
@@ -13,6 +14,7 @@ import crypto from 'crypto';
 import path from 'path';
 import { makeId } from '@gitroom/nestjs-libraries/services/make.is';
 import { trimTrailingSlashes } from '@gitroom/nestjs-libraries/upload/trim.slashes';
+import { cleanOriginalName } from '@gitroom/nestjs-libraries/upload/original.name';
 
 const {
   CLOUDFLARE_ACCOUNT_ID,
@@ -79,9 +81,25 @@ export async function simpleUpload(
   return trimTrailingSlashes(CLOUDFLARE_BUCKET_URL) + '/' + randomFilename;
 }
 
+// Real file name stored with the object when the upload was created.
+export async function getStoredOriginalName(
+  key: string
+): Promise<string | undefined> {
+  try {
+    const head = await R2.send(
+      new HeadObjectCommand({ Bucket: CLOUDFLARE_BUCKETNAME, Key: key })
+    );
+    const raw = head.Metadata?.['original-name'];
+    return raw ? cleanOriginalName(decodeURIComponent(raw)) : undefined;
+  } catch (err) {
+    return undefined;
+  }
+}
+
 export async function createMultipartUpload(req: Request, res: Response) {
   const { file, fileHash, contentType } = req.body;
   const fileExtension = path.extname(file.name); // Extract extension
+  const originalName = cleanOriginalName(file.name);
   const randomFilename = generateRandomString() + fileExtension; // Append extension
 
   try {
@@ -91,6 +109,10 @@ export async function createMultipartUpload(req: Request, res: Response) {
       ContentType: contentType,
       Metadata: {
         'x-amz-meta-file-hash': fileHash,
+        // header-safe copy of the real file name, read back on completion
+        ...(originalName
+          ? { 'original-name': encodeURIComponent(originalName) }
+          : {}),
       },
     };
 
