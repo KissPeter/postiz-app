@@ -7,6 +7,8 @@ import { From, OrderStatus, User } from '@prisma/client';
 import { OrganizationRepository } from '@gitroom/nestjs-libraries/database/prisma/organizations/organization.repository';
 import { NotificationService } from '@gitroom/nestjs-libraries/database/prisma/notifications/notification.service';
 import dayjs from 'dayjs';
+import { PostsRepository } from '@gitroom/nestjs-libraries/database/prisma/posts/posts.repository';
+import { cancelPostJobs } from '@gitroom/helpers/utils/comment.delay';
 import { BullMqClient } from '@gitroom/nestjs-libraries/bull-mq-transport-new/client';
 
 @Injectable()
@@ -15,8 +17,16 @@ export class MessagesService {
     private _workerServiceProducer: BullMqClient,
     private _messagesRepository: MessagesRepository,
     private _organizationRepository: OrganizationRepository,
-    private _inAppNotificationService: NotificationService
+    private _inAppNotificationService: NotificationService,
+    private _postsRepository: PostsRepository
   ) {}
+
+  private async cancelThreadJobs(postId: string) {
+    await cancelPostJobs(
+      this._workerServiceProducer,
+      await this._postsRepository.getGroupPostIds('', postId)
+    );
+  }
 
   async createConversation(
     userId: string,
@@ -211,6 +221,7 @@ export class MessagesService {
   async requestCancel(orgId: string, postId: string) {
     const cancel = await this._messagesRepository.requestCancel(orgId, postId);
     await this._workerServiceProducer.delete('post', postId);
+    await this.cancelThreadJobs(postId);
     return cancel;
   }
 
@@ -222,9 +233,10 @@ export class MessagesService {
     if (!orderList) {
       return false;
     }
-    orderList.posts.forEach((post) => {
-      this._workerServiceProducer.delete('post', post.id);
-    });
+    for (const post of orderList.posts) {
+      await this._workerServiceProducer.delete('post', post.id);
+      await this.cancelThreadJobs(post.id);
+    }
     return orderList;
   }
 

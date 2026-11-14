@@ -165,6 +165,26 @@ export class InstagramStandaloneProvider
     );
   }
 
+  async comment(
+    id: string,
+    accessToken: string,
+    rootPostId: string,
+    lastCommentId: string,
+    comments: PostDetails<InstagramDto>[],
+    integration: Integration
+  ): Promise<PostResponse[]> {
+    return instagramProvider.comment(
+      id,
+      accessToken,
+      rootPostId,
+      lastCommentId,
+      comments,
+      integration,
+      'graph.instagram.com',
+      ''
+    );
+  }
+
   async analytics(id: string, accessToken: string, date: number) {
     return instagramProvider.analytics(
       id,

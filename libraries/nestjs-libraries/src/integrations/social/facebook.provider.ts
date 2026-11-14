@@ -8,7 +8,6 @@ import {
 import { makeSecureId } from '@gitroom/nestjs-libraries/services/make.secure.id';
 import dayjs from 'dayjs';
 import { timer } from '@gitroom/helpers/utils/timer';
-import { waitCommentDelay } from '@gitroom/helpers/utils/comment.delay';
 import { SocialAbstract } from '@gitroom/nestjs-libraries/integrations/social.abstract';
 import { FacebookDto } from '@gitroom/nestjs-libraries/dtos/posts/providers-settings/facebook.dto';
 import { DribbbleDto } from '@gitroom/nestjs-libraries/dtos/posts/providers-settings/dribbble.dto';
@@ -441,10 +440,34 @@ export class FacebookProvider extends SocialAbstract implements SocialProvider {
       finalId = postId;
     }
 
-    const postsArray = [];
-    let commentId = finalId;
+    const postsArray = await this.comment(
+      id,
+      accessToken,
+      finalId,
+      finalId,
+      comments
+    );
+    return [
+      {
+        id: firstPost.id,
+        postId: finalId,
+        releaseURL: finalUrl,
+        status: 'success',
+      },
+      ...postsArray,
+    ];
+  }
+
+  async comment(
+    id: string,
+    accessToken: string,
+    rootPostId: string,
+    lastCommentId: string,
+    comments: PostDetails[]
+  ): Promise<PostResponse[]> {
+    const postsArray: PostResponse[] = [];
+    let commentId = lastCommentId;
     for (const comment of comments) {
-      await waitCommentDelay(comment.delay);
       const data = await (
         await this.fetch(
           `https://graph.facebook.com/${META_GRAPH_API_VERSION}/${commentId}/comments?access_token=${accessToken}&fields=id,permalink_url`,
@@ -472,15 +495,7 @@ export class FacebookProvider extends SocialAbstract implements SocialProvider {
         status: 'success',
       });
     }
-    return [
-      {
-        id: firstPost.id,
-        postId: finalId,
-        releaseURL: finalUrl,
-        status: 'success',
-      },
-      ...postsArray,
-    ];
+    return postsArray;
   }
 
   async analytics(

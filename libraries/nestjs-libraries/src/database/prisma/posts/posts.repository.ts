@@ -225,6 +225,31 @@ export class PostsRepository {
     }, [] as any[]);
   }
 
+  // ids of every post of a thread, soft-deleted ones included, so queued jobs
+  // (root and delayed comments) can be removed whatever happened to the rows
+  async getGroupPostIds(group: string, postId?: string) {
+    const groupName =
+      group ||
+      (postId
+        ? (
+            await this._post.model.post.findUnique({
+              where: { id: postId },
+              select: { group: true },
+            })
+          )?.group
+        : undefined);
+    if (!groupName) {
+      return postId ? [postId] : [];
+    }
+
+    return (
+      await this._post.model.post.findMany({
+        where: { group: groupName },
+        select: { id: true },
+      })
+    ).map((p) => p.id);
+  }
+
   async deletePost(orgId: string, group: string) {
     await this._post.model.post.updateMany({
       where: {

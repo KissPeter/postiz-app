@@ -13,10 +13,10 @@ export class PostsController {
   ) {}
 
   @EventPattern('post', Transport.REDIS)
-  async post(data: { id: string }) {
+  async post(data: { id: string; resumeFrom?: string }) {
     console.log('processing', data);
     try {
-      return await this._postsService.post(data.id);
+      return await this._postsService.post(data.id, data.resumeFrom);
     } catch (err) {
       console.log("Unhandled error, let's avoid crashing the post worker", err);
     }
