@@ -7,7 +7,6 @@ import {
 } from '@gitroom/nestjs-libraries/integrations/social/social.integrations.interface';
 import { makeSecureId } from '@gitroom/nestjs-libraries/services/make.secure.id';
 import { timer } from '@gitroom/helpers/utils/timer';
-import { waitCommentDelay } from '@gitroom/helpers/utils/comment.delay';
 import dayjs from 'dayjs';
 import { SocialAbstract } from '@gitroom/nestjs-libraries/integrations/social.abstract';
 import { InstagramDto } from '@gitroom/nestjs-libraries/dtos/posts/providers-settings/instagram.dto';
@@ -625,11 +624,37 @@ export class InstagramProvider
       linkGlobal = permalink;
     }
 
-    for (const post of theRest) {
-      await waitCommentDelay(post.delay);
+    arr.push(
+      ...(await this.comment(
+        id,
+        accessToken,
+        containerIdGlobal,
+        containerIdGlobal,
+        theRest,
+        integration,
+        type,
+        linkGlobal
+      ))
+    );
+
+    return arr;
+  }
+
+  async comment(
+    id: string,
+    accessToken: string,
+    rootPostId: string,
+    lastCommentId: string,
+    comments: PostDetails[],
+    integration: Integration,
+    type = 'graph.facebook.com',
+    releaseURL = ''
+  ): Promise<PostResponse[]> {
+    const arr: PostResponse[] = [];
+    for (const post of comments) {
       const { id: commentId } = await (
         await this.fetch(
-          `https://${type}/${META_GRAPH_API_VERSION}/${containerIdGlobal}/comments?message=${encodeURIComponent(
+          `https://${type}/${META_GRAPH_API_VERSION}/${rootPostId}/comments?message=${encodeURIComponent(
             post.message
           )}&access_token=${accessToken}`,
           {
@@ -641,7 +666,7 @@ export class InstagramProvider
       arr.push({
         id: post.id,
         postId: commentId,
-        releaseURL: linkGlobal,
+        releaseURL,
         status: 'success',
       });
     }

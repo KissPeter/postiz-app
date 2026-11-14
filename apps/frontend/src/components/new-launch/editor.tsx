@@ -437,7 +437,7 @@ export const EditorWrapper: FC<{
             <DelayComponent value={g.delay} onChange={changeDelay(index)} />
           )}
           <div className="flex gap-[5px] flex-1 w-full">
-            <div className="flex-1 flex w-full">
+            <div className="flex-1 flex w-full min-w-0">
               {index > 0 && (
                 <div className="flex justify-center pl-[12px] text-newSep">
                   <ConnectionLineIcon />

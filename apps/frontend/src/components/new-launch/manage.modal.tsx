@@ -327,9 +327,9 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
 
   return (
     <div className="w-full h-full flex-1 p-[40px] flex relative">
-      <div className="flex flex-1 bg-newBgColorInner rounded-[20px] flex-col">
-        <div className="flex-1 flex">
-          <div className="flex flex-col flex-1 border-r border-newBorder">
+      <div className="flex flex-1 min-w-0 bg-newBgColorInner rounded-[20px] flex-col">
+        <div className="flex-1 flex min-w-0">
+          <div className="flex flex-col flex-1 min-w-0 border-r border-newBorder">
             <div className="bg-newBgColor h-[65px] rounded-tl-[20px] flex items-center px-[20px] text-[20px] font-[600]">
               Create Post
             </div>
@@ -406,7 +406,7 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
               </div>
             </div>
           </div>
-          <div className="w-[580px] flex flex-col">
+          <div className="w-[580px] shrink-0 flex flex-col">
             <div className="bg-newBgColor h-[65px] rounded-tr-[20px] flex items-center px-[20px] text-[20px] font-[600]">
               <div className="flex-1">Post Preview</div>
               <div className="cursor-pointer">

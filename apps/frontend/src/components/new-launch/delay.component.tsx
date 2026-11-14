@@ -20,8 +20,20 @@ export const DelayComponent: FC<{
 }> = ({ value, onChange }) => {
   const t = useT();
   const current = clampCommentDelay(value);
+  const label = (m: number) => {
+    if (m % 10080 === 0) {
+      return `${m / 10080} ${t('comment_delay_week', 'week')}`;
+    }
+    if (m % 1440 === 0) {
+      return `${m / 1440} ${t('comment_delay_day', 'day')}`;
+    }
+    if (m % 60 === 0) {
+      return `${m / 60} ${t('comment_delay_hour', 'hour')}`;
+    }
+    return `${m} ${t('comment_delay_minutes', 'min')}`;
+  };
   return (
-    <div className="flex items-center gap-[8px] text-[13px] ps-[12px] pb-[8px]">
+    <div className="flex flex-wrap items-center gap-[8px] text-[13px] ps-[12px] pb-[8px]">
       <div>{t('comment_delay', 'Publish this comment after')}</div>
       <select
         className="h-[30px] rounded-[6px] bg-newBgColorInner px-[8px] outline-none"
@@ -31,7 +43,7 @@ export const DelayComponent: FC<{
         <option value={0}>{t('comment_delay_none', 'right away')}</option>
         {COMMENT_DELAY_OPTIONS.map((m) => (
           <option key={m} value={m}>
-            {m} {t('comment_delay_minutes', 'min')}
+            {label(m)}
           </option>
         ))}
       </select>

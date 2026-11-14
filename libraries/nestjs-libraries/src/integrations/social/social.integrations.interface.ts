@@ -77,6 +77,17 @@ export interface ISocialMediaIntegration {
     postDetails: PostDetails[],
     integration: Integration
   ): Promise<PostResponse[]>; // Schedules a new post
+
+  // Publishes follow-up comments of an already published post. Used for
+  // delayed comments, which run as their own scheduled job.
+  comment?(
+    id: string,
+    accessToken: string,
+    rootPostId: string, // platform id of the published root post
+    lastCommentId: string, // platform id of the previous item in the thread
+    comments: PostDetails[],
+    integration: Integration
+  ): Promise<PostResponse[]>;
 }
 
 export type PostResponse = {
@@ -92,7 +103,7 @@ export type PostDetails<T = any> = {
   settings: T;
   media?: MediaContent[];
   poll?: PollDetails;
-  delay?: number; // minutes to wait before publishing this comment
+  delay?: number; // minutes to wait after the previous item (scheduled as a separate job)
 };
 
 export type PollDetails = {

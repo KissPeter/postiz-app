@@ -9,6 +9,12 @@ import { CreatePostDto } from '@gitroom/nestjs-libraries/dtos/posts/create.post.
 import dayjs from 'dayjs';
 import { IntegrationManager } from '@gitroom/nestjs-libraries/integrations/integration.manager';
 import { Integration, Post, Media, From } from '@prisma/client';
+import {
+  buildNextCommentJob,
+  cancelPostJobs,
+  segmentThread,
+} from '@gitroom/helpers/utils/comment.delay';
+import { PostResponse } from '@gitroom/nestjs-libraries/integrations/social/social.integrations.interface';
 import { GetPostsDto } from '@gitroom/nestjs-libraries/dtos/posts/get.posts.dto';
 import { NotificationService } from '@gitroom/nestjs-libraries/database/prisma/notifications/notification.service';
 import { capitalize, shuffle, uniq } from 'lodash';
@@ -293,10 +299,38 @@ export class PostsService {
     return this._postRepository.getOldPosts(orgId, date);
   }
 
-  async post(id: string) {
+  private scheduleNextComment(rootId: string, next?: Post) {
+    const job = buildNextCommentJob(rootId, next);
+    if (job) {
+      this._workerServiceProducer.emit('post', job);
+    }
+  }
+
+  // Removes the queued jobs of a whole thread (root + delayed comments).
+  // Looks the thread up by group, including soft-deleted rows, so it works
+  // before and after the posts were deleted or replaced.
+  private async cancelThreadJobs(group?: string | null) {
+    if (!group) {
+      return;
+    }
+    await cancelPostJobs(
+      this._workerServiceProducer,
+      await this._postRepository.getGroupPostIds(group)
+    );
+  }
+
+  async post(id: string, resumeFrom?: string) {
     const allPosts = await this.getPostsRecursively(id, true);
-    const [firstPost, ...morePosts] = allPosts;
+    const [firstPost] = allPosts;
     if (!firstPost) {
+      return;
+    }
+
+    const resumeIndex = resumeFrom
+      ? allPosts.findIndex((p) => p.id === resumeFrom)
+      : 0;
+    if (resumeIndex < 0 || (resumeFrom && resumeIndex === 0)) {
+      // the delayed comment was deleted or is no longer part of the thread
       return;
     }
 
@@ -324,11 +358,24 @@ export class PostsService {
       return;
     }
 
-    try {
-      const finalPost = await this.postSocial(firstPost.integration!, [
+    if (resumeFrom) {
+      return this.postDelayedComments(
         firstPost,
-        ...morePosts,
-      ]);
+        allPosts,
+        resumeIndex
+      );
+    }
+
+    try {
+      const segment = segmentThread(allPosts, 0);
+      const finalPost = await this.postSocial(
+        firstPost.integration!,
+        segment
+      );
+
+      if (finalPost?.postId) {
+        this.scheduleNextComment(firstPost.id, allPosts[segment.length]);
+      }
 
       if (firstPost?.intervalInDays) {
         this._workerServiceProducer.emit('post', {
@@ -388,6 +435,128 @@ export class PostsService {
     }
   }
 
+  private async postDelayedComments(
+    firstPost: Post & { integration?: Integration | null },
+    allPosts: Post[],
+    start: number
+  ) {
+    const integration = firstPost.integration!;
+    const segment = segmentThread(allPosts, start);
+    const failed = allPosts[start];
+    const provider = this._integrationManager.getSocialIntegration(
+      integration.providerIdentifier
+    );
+
+    if (!firstPost.releaseId || !provider?.comment) {
+      return;
+    }
+
+    try {
+      const published = await this.commentSocial(
+        integration,
+        provider,
+        firstPost,
+        allPosts[start - 1]?.releaseId || firstPost.releaseId,
+        segment
+      );
+
+      for (const post of published) {
+        try {
+          await this._postRepository.updatePost(
+            post.id,
+            post.postId,
+            post.releaseURL || firstPost.releaseURL || ''
+          );
+        } catch (err) {}
+      }
+
+      this.scheduleNextComment(firstPost.id, allPosts[start + segment.length]);
+    } catch (err: any) {
+      await this._postRepository.changeState(failed.id, 'ERROR', err, allPosts);
+      await this._notificationService.inAppNotification(
+        firstPost.organizationId,
+        `Error posting a delayed comment on ${integration.providerIdentifier} for ${integration.name}`,
+        `An error occurred while posting a delayed comment on ${
+          integration.providerIdentifier
+        }${err?.message ? `: ${err?.message}` : ``}`,
+        true,
+        false,
+        'fail'
+      );
+    }
+  }
+
+  private async commentSocial(
+    integration: Integration,
+    provider: ReturnType<IntegrationManager['getSocialIntegration']>,
+    rootPost: Post,
+    lastCommentId: string,
+    posts: Post[],
+    forceRefresh = false
+  ): Promise<PostResponse[]> {
+    if (dayjs(integration?.tokenExpiration).isBefore(dayjs()) || forceRefresh) {
+      const data = await this._refreshIntegrationService.refresh(integration);
+      if (!data) {
+        throw new Error('Could not refresh the integration token');
+      }
+
+      integration.token = data.accessToken;
+    }
+
+    const newPosts = await this.updateTags(integration.organizationId, posts);
+
+    try {
+      return await provider.comment!(
+        integration.internalId,
+        integration.token,
+        rootPost.releaseId!,
+        lastCommentId,
+        await this.toPostDetails(provider, newPosts),
+        integration
+      );
+    } catch (err) {
+      if (err instanceof RefreshToken && !forceRefresh) {
+        return this.commentSocial(
+          integration,
+          provider,
+          rootPost,
+          lastCommentId,
+          posts,
+          true
+        );
+      }
+      throw err;
+    }
+  }
+
+  private async toPostDetails(
+    getIntegration: NonNullable<
+      ReturnType<IntegrationManager['getSocialIntegration']>
+    >,
+    newPosts: Post[]
+  ) {
+    return Promise.all(
+      (newPosts || []).map(async (p) => ({
+        id: p.id,
+        message: stripHtmlValidation(
+          getIntegration.editor,
+          p.content,
+          true,
+          false,
+          !/<\/?[a-z][\s\S]*>/i.test(p.content),
+          getIntegration.mentionFormat
+        ),
+        settings: JSON.parse(p.settings || '{}'),
+        delay: p.delay || 0,
+        media: await this.updateMedia(
+          p.id,
+          JSON.parse(p.image || '[]'),
+          getIntegration?.convertToJPEG || false
+        ),
+      }))
+    );
+  }
+
   private async updateTags(orgId: string, post: Post[]): Promise<Post[]> {
     const plainText = JSON.stringify(post);
     const extract = Array.from(
@@ -445,26 +614,7 @@ export class PostsService {
       const publishedPosts = await getIntegration.post(
         integration.internalId,
         integration.token,
-        await Promise.all(
-          (newPosts || []).map(async (p) => ({
-            id: p.id,
-            message: stripHtmlValidation(
-              getIntegration.editor,
-              p.content,
-              true,
-              false,
-              !/<\/?[a-z][\s\S]*>/i.test(p.content),
-              getIntegration.mentionFormat
-            ),
-            settings: JSON.parse(p.settings || '{}'),
-            delay: p.delay || 0,
-            media: await this.updateMedia(
-              p.id,
-              JSON.parse(p.image || '[]'),
-              getIntegration?.convertToJPEG || false
-            ),
-          }))
-        ),
+        await this.toPostDetails(getIntegration, newPosts),
         integration
       );
 
@@ -624,6 +774,7 @@ export class PostsService {
     const post = await this._postRepository.deletePost(orgId, group);
     if (post?.id) {
       await this._workerServiceProducer.delete('post', post.id);
+      await this.cancelThreadJobs(group);
       return { id: post.id };
     }
 
@@ -667,6 +818,8 @@ export class PostsService {
         'post',
         previousPost ? previousPost : posts?.[0]?.id
       );
+      // an edit replaces the whole thread: drop its pending delayed comments
+      await this.cancelThreadJobs(post.group);
 
       if (
         body.type === 'now' ||
@@ -708,6 +861,7 @@ export class PostsService {
     const getPostById = await this._postRepository.getPostById(id, orgId);
 
     await this._workerServiceProducer.delete('post', id);
+    await this.cancelThreadJobs(getPostById?.group);
     if (getPostById?.state !== 'DRAFT') {
       this._workerServiceProducer.emit('post', {
         id: id,
