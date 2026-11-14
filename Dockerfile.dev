@@ -16,6 +16,8 @@ COPY . /app
 COPY var/docker/nginx.conf /etc/nginx/nginx.conf
 
 RUN pnpm install
+RUN node var/docker/patch-next-font.js
+RUN sed -i -e 's/productionBrowserSourceMaps: true/productionBrowserSourceMaps: false/' -e "s/config.devtool = isServer ? 'source-map' : 'hidden-source-map';/config.devtool = false;/" apps/frontend/next.config.js && grep -c 'config.devtool = false' apps/frontend/next.config.js
 RUN NODE_OPTIONS="--max-old-space-size=4096" pnpm run build
 
 CMD ["sh", "-c", "nginx && pnpm run pm2"]
