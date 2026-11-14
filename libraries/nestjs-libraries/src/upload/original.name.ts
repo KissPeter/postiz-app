@@ -14,7 +14,7 @@ export const cleanOriginalName = (name?: string | null): string | undefined => {
       throw new Error('already decoded');
     }
     const decoded = Buffer.from(value, 'latin1').toString('utf8');
-    if (!decoded.includes('\\uFFFD')) {
+    if (!decoded.includes('�')) {
       value = decoded;
     }
   } catch (err) {
