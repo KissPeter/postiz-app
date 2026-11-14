@@ -12,6 +12,6 @@ describe('comment delay', () => {
     expect(clampCommentDelay(1.9)).toBe(1);
     expect(clampCommentDelay(30)).toBe(30);
     expect(clampCommentDelay(10080)).toBe(10080);
-    expect(clampCommentDelay(9999)).toBe(MAX_COMMENT_DELAY_MINUTES);
+    expect(clampCommentDelay(99999)).toBe(MAX_COMMENT_DELAY_MINUTES);
   });
 });
