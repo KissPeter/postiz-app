@@ -95,6 +95,13 @@ export class NotificationService {
     message: string,
     type?: NotificationType
   ) {
+    const override = this.notificationEmailOverride();
+    if (override.length) {
+      for (const to of override) {
+        await this.sendEmail(to, subject, message);
+      }
+      return;
+    }
     const userOrg = await this._organizationRepository.getAllUsersOrgs(orgId);
     for (const user of userOrg?.users || []) {
       // 'info' type is always sent regardless of preferences
@@ -125,6 +132,13 @@ export class NotificationService {
     message: string,
     types: NotificationType[]
   ) {
+    const override = this.notificationEmailOverride();
+    if (override.length) {
+      for (const to of override) {
+        await this.sendEmail(to, subject, message);
+      }
+      return;
+    }
     const userOrg = await this._organizationRepository.getAllUsersOrgs(orgId);
     const hasInfo = types.includes('info');
     const hasSuccess = types.includes('success');
@@ -148,6 +162,16 @@ export class NotificationService {
 
       await this.sendEmail(user.user.email, subject, message);
     }
+  }
+
+  // Local patch: NOTIFICATION_EMAIL_TO (comma separated) receives all
+  // org notification and digest emails instead of the individual members.
+  // Account emails (invites, activation, password reset) are not affected.
+  notificationEmailOverride(): string[] {
+    return (process.env.NOTIFICATION_EMAIL_TO || '')
+      .split(',')
+      .map((e) => e.trim())
+      .filter(Boolean);
   }
 
   async sendEmail(to: string, subject: string, html: string, replyTo?: string) {
