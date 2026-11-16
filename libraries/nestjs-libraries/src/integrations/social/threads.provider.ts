@@ -14,11 +14,14 @@ import { capitalize, chunk } from 'lodash';
 import { Plug } from '@gitroom/helpers/decorators/plug.decorator';
 import { Integration } from '@prisma/client';
 import { stripHtmlValidation } from '@gitroom/helpers/utils/strip.html.validation';
+import { ThreadsDto } from '@gitroom/nestjs-libraries/dtos/posts/providers-settings/threads.dto';
+import { normalizeTopicTag } from '@gitroom/nestjs-libraries/integrations/social/threads.topic.tag';
 
 export class ThreadsProvider extends SocialAbstract implements SocialProvider {
   identifier = 'threads';
   name = 'Threads';
   isBetweenSteps = false;
+  dto = ThreadsDto;
   scopes = [
     'threads_basic',
     'threads_content_publish',
@@ -165,7 +168,8 @@ export class ThreadsProvider extends SocialAbstract implements SocialProvider {
     media: { path: string },
     message: string,
     isCarouselItem = false,
-    replyToId?: string
+    replyToId?: string,
+    topicTag?: string
   ): Promise<string> {
     const mediaType =
       media.path.indexOf('.mp4') > -1 ? 'video_url' : 'image_url';
@@ -174,6 +178,7 @@ export class ThreadsProvider extends SocialAbstract implements SocialProvider {
       ...(mediaType === 'image_url' ? { image_url: media.path } : {}),
       ...(isCarouselItem ? { is_carousel_item: 'true' } : {}),
       ...(replyToId ? { reply_to_id: replyToId } : {}),
+      ...(topicTag ? { topic_tag: topicTag } : {}),
       media_type: mediaType === 'video_url' ? 'VIDEO' : 'IMAGE',
       text: message,
       access_token: accessToken,
@@ -196,7 +201,8 @@ export class ThreadsProvider extends SocialAbstract implements SocialProvider {
     accessToken: string,
     media: { path: string }[],
     message: string,
-    replyToId?: string
+    replyToId?: string,
+    topicTag?: string
   ): Promise<string> {
     // Create each media item
     const mediaIds = [];
@@ -222,6 +228,7 @@ export class ThreadsProvider extends SocialAbstract implements SocialProvider {
       media_type: 'CAROUSEL',
       children: mediaIds.join(','),
       ...(replyToId ? { reply_to_id: replyToId } : {}),
+      ...(topicTag ? { topic_tag: topicTag } : {}),
       access_token: accessToken,
     });
 
@@ -242,7 +249,8 @@ export class ThreadsProvider extends SocialAbstract implements SocialProvider {
     accessToken: string,
     message: string,
     replyToId?: string,
-    quoteId?: string
+    quoteId?: string,
+    topicTag?: string
   ): Promise<string> {
     const form = new FormData();
     form.append('media_type', 'TEXT');
@@ -255,6 +263,10 @@ export class ThreadsProvider extends SocialAbstract implements SocialProvider {
 
     if (quoteId) {
       form.append('quote_post_id', quoteId);
+    }
+
+    if (topicTag) {
+      form.append('topic_tag', topicTag);
     }
 
     const { id: contentId } = await (
@@ -297,7 +309,8 @@ export class ThreadsProvider extends SocialAbstract implements SocialProvider {
     accessToken: string,
     postDetails: PostDetails,
     replyToId?: string,
-    quoteId?: string
+    quoteId?: string,
+    topicTag?: string
   ): Promise<string> {
     // Handle content creation based on media type
     if (!postDetails.media || postDetails.media.length === 0) {
@@ -307,7 +320,8 @@ export class ThreadsProvider extends SocialAbstract implements SocialProvider {
         accessToken,
         postDetails.message,
         replyToId,
-        quoteId
+        quoteId,
+        topicTag
       );
     } else if (postDetails.media.length === 1) {
       // Single media content
@@ -317,7 +331,8 @@ export class ThreadsProvider extends SocialAbstract implements SocialProvider {
         postDetails.media[0],
         postDetails.message,
         false,
-        replyToId
+        replyToId,
+        topicTag
       );
     } else {
       // Carousel content
@@ -326,7 +341,8 @@ export class ThreadsProvider extends SocialAbstract implements SocialProvider {
         accessToken,
         postDetails.media,
         postDetails.message,
-        replyToId
+        replyToId,
+        topicTag
       );
     }
   }
@@ -337,6 +353,7 @@ export class ThreadsProvider extends SocialAbstract implements SocialProvider {
     postDetails: PostDetails<{
       active_thread_finisher: boolean;
       thread_finisher: string;
+      topic_tag?: string;
     }>[]
   ): Promise<PostResponse[]> {
     if (!postDetails.length) {
@@ -345,11 +362,17 @@ export class ThreadsProvider extends SocialAbstract implements SocialProvider {
 
     const [firstPost, ...replies] = postDetails;
 
+    // Topic tag is only attached to the root post, never to replies or the finisher
+    const topicTag = normalizeTopicTag(firstPost?.settings?.topic_tag);
+
     // Create the initial thread
     const initialContentId = await this.createThreadContent(
       userId,
       accessToken,
-      firstPost
+      firstPost,
+      undefined,
+      undefined,
+      topicTag
     );
 
     // Publish the thread
