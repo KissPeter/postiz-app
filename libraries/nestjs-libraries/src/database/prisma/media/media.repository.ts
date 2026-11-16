@@ -15,7 +15,8 @@ export class MediaRepository {
     org: string,
     fileName: string,
     filePath: string,
-    originalName?: string
+    originalName?: string,
+    extra?: { type?: 'image' | 'video'; folderId?: string; fileSize?: number }
   ) {
     return this._media.model.media.create({
       data: {
@@ -26,6 +27,9 @@ export class MediaRepository {
         },
         name: originalName || fileName,
         path: filePath,
+        ...(extra?.type ? { type: extra.type } : {}),
+        ...(extra?.fileSize ? { fileSize: extra.fileSize } : {}),
+        ...(extra?.folderId ? { folder: { connect: { id: extra.folderId } } } : {}),
       },
       select: {
         id: true,
@@ -33,6 +37,19 @@ export class MediaRepository {
         path: true,
         thumbnail: true,
         alt: true,
+        type: true,
+        folderId: true,
+      },
+    });
+  }
+
+  findTopLevelFolderByName(org: string, name: string) {
+    return this._mediaFolder.model.mediaFolder.findFirst({
+      where: {
+        organizationId: org,
+        name,
+        parentId: null,
+        deletedAt: null,
       },
     });
   }
