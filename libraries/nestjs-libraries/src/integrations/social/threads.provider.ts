@@ -9,13 +9,21 @@ import { makeId } from '@gitroom/nestjs-libraries/services/make.is';
 import { makeSecureId } from '@gitroom/nestjs-libraries/services/make.secure.id';
 import { timer } from '@gitroom/helpers/utils/timer';
 import dayjs from 'dayjs';
-import { SocialAbstract } from '@gitroom/nestjs-libraries/integrations/social.abstract';
+import {
+  BadBody,
+  SocialAbstract,
+} from '@gitroom/nestjs-libraries/integrations/social.abstract';
 import { capitalize, chunk } from 'lodash';
 import { Plug } from '@gitroom/helpers/decorators/plug.decorator';
 import { Integration } from '@prisma/client';
 import { stripHtmlValidation } from '@gitroom/helpers/utils/strip.html.validation';
 import { ThreadsDto } from '@gitroom/nestjs-libraries/dtos/posts/providers-settings/threads.dto';
 import { normalizeTopicTag } from '@gitroom/nestjs-libraries/integrations/social/threads.topic.tag';
+import {
+  CONTAINER_POLL_MAX,
+  containerFailureMessage,
+  isContainerFailure,
+} from '@gitroom/nestjs-libraries/integrations/social/threads.container.status';
 import { publishReplyChain } from '@gitroom/nestjs-libraries/integrations/social/threads.reply.chain';
 
 export class ThreadsProvider extends SocialAbstract implements SocialProvider {
@@ -129,23 +137,38 @@ export class ThreadsProvider extends SocialAbstract implements SocialProvider {
     mediaContainerId: string,
     accessToken: string
   ): Promise<boolean> {
-    const { status, id, error_message } = await (
-      await this.fetch(
-        `https://graph.threads.net/v1.0/${mediaContainerId}?fields=status,error_message&access_token=${accessToken}`
-      )
-    ).json();
+    for (let attempt = 0; attempt < CONTAINER_POLL_MAX; attempt++) {
+      const { status, error_message } = await (
+        await this.fetch(
+          `https://graph.threads.net/v1.0/${mediaContainerId}?fields=status,error_message&access_token=${accessToken}`
+        )
+      ).json();
 
-    if (status === 'ERROR') {
-      throw new Error(id);
+      if (isContainerFailure(status)) {
+        // Keep Threads' own reason: it ends up in the post's error and in the
+        // notification, instead of a bare "Something is wrong with threads".
+        throw new BadBody(
+          'threads',
+          JSON.stringify({ id: mediaContainerId, status, error_message }),
+          '{}',
+          containerFailureMessage(status, error_message)
+        );
+      }
+
+      if (status === 'FINISHED') {
+        await timer(2000);
+        return true;
+      }
+
+      await timer(2200);
     }
 
-    if (status === 'FINISHED') {
-      await timer(2000);
-      return true;
-    }
-
-    await timer(2200);
-    return this.checkLoaded(mediaContainerId, accessToken);
+    throw new BadBody(
+      'threads',
+      JSON.stringify({ id: mediaContainerId, status: 'TIMEOUT' }),
+      '{}',
+      'Threads took too long to process the media, please try again'
+    );
   }
 
   private async fetchUserInfo(accessToken: string) {
