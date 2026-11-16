@@ -16,6 +16,7 @@ import { Integration } from '@prisma/client';
 import { stripHtmlValidation } from '@gitroom/helpers/utils/strip.html.validation';
 import { ThreadsDto } from '@gitroom/nestjs-libraries/dtos/posts/providers-settings/threads.dto';
 import { normalizeTopicTag } from '@gitroom/nestjs-libraries/integrations/social/threads.topic.tag';
+import { publishReplyChain } from '@gitroom/nestjs-libraries/integrations/social/threads.reply.chain';
 
 export class ThreadsProvider extends SocialAbstract implements SocialProvider {
   identifier = 'threads';
@@ -345,6 +346,32 @@ export class ThreadsProvider extends SocialAbstract implements SocialProvider {
         topicTag
       );
     }
+  }
+
+  // Publishes the follow-up comments of an already published thread. This is
+  // what makes a delayed comment work: posts.service queues it as its own job
+  // and calls comment() once the delay is over.
+  async comment(
+    userId: string,
+    accessToken: string,
+    rootPostId: string,
+    lastCommentId: string,
+    comments: PostDetails[],
+    integration: Integration
+  ): Promise<PostResponse[]> {
+    return publishReplyChain(
+      lastCommentId || rootPostId,
+      comments,
+      async (comment, replyToId) => {
+        const contentId = await this.createThreadContent(
+          userId,
+          accessToken,
+          comment,
+          replyToId
+        );
+        return this.publishThread(userId, accessToken, contentId);
+      }
+    );
   }
 
   async post(
