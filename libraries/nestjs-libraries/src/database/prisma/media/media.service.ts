@@ -58,9 +58,25 @@ export class MediaService {
     org: string,
     fileName: string,
     filePath: string,
-    originalName?: string
+    originalName?: string,
+    extra?: { type?: 'image' | 'video'; folderId?: string; fileSize?: number }
   ) {
-    return this._mediaRepository.saveFile(org, fileName, filePath, originalName);
+    return this._mediaRepository.saveFile(
+      org,
+      fileName,
+      filePath,
+      originalName,
+      extra
+    );
+  }
+
+  /** The id of the top-level folder called `name`, created when it does not exist. */
+  async ensureFolder(org: string, name: string) {
+    const existing = await this._mediaRepository.findTopLevelFolderByName(org, name);
+    if (existing) {
+      return existing.id;
+    }
+    return (await this._mediaRepository.createFolder(org, { name })).id;
   }
 
   getMedia(org: string, page: number, folderId?: string) {

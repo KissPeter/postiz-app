@@ -31,6 +31,7 @@ import axios from 'axios';
 import { Readable } from 'stream';
 import { lookup } from 'mime-types';
 import * as Sentry from '@sentry/nestjs';
+import { mediaTypeFor } from '@gitroom/nestjs-libraries/database/prisma/media/media.type';
 
 @ApiTags('Public API')
 @Controller('/public/v1')
@@ -47,7 +48,8 @@ export class PublicIntegrationsController {
   @UseInterceptors(FileInterceptor('file'))
   async uploadSimple(
     @GetOrgFromRequest() org: Organization,
-    @UploadedFile('file') file: Express.Multer.File
+    @UploadedFile('file') file: Express.Multer.File,
+    @Body('folder') folder?: string
   ) {
     Sentry.metrics.count("public_api-request", 1);
     if (!file) {
@@ -56,11 +58,21 @@ export class PublicIntegrationsController {
 
     const originalName = file.originalname;
     const getFile = await this.storage.uploadFile(file);
+    // Optional multipart field `folder`: a media folder name, created when missing.
+    const folderName = typeof folder === 'string' ? folder.trim() : '';
+    const folderId = folderName
+      ? await this._mediaService.ensureFolder(org.id, folderName)
+      : undefined;
     return this._mediaService.saveFile(
       org.id,
       getFile.originalname,
       getFile.path,
-      originalName
+      originalName,
+      {
+        type: mediaTypeFor(file.mimetype, getFile.path),
+        fileSize: file.size,
+        folderId,
+      }
     );
   }
 
@@ -93,7 +105,8 @@ export class PublicIntegrationsController {
       org.id,
       getFile.originalname,
       getFile.path,
-      new URL(body.url).pathname.split('/').pop() || undefined
+      new URL(body.url).pathname.split('/').pop() || undefined,
+      { type: mediaTypeFor(lookup(body?.url?.split?.('?')?.[0]) || '', getFile.path) }
     );
   }
 
