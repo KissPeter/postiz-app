@@ -12,10 +12,16 @@ import axios from 'axios';
 import { YoutubeSettingsDto } from '@gitroom/nestjs-libraries/dtos/posts/providers-settings/youtube.settings.dto';
 import {
   BadBody,
+  RefreshToken,
   SocialAbstract,
 } from '@gitroom/nestjs-libraries/integrations/social.abstract';
 import * as process from 'node:process';
 import dayjs from 'dayjs';
+import {
+  youtubeAuthError,
+  youtubeHandledErrorMessage,
+  youtubeUploadedVideoId,
+} from '@gitroom/helpers/utils/youtube.publish';
 import { GaxiosResponse } from 'gaxios/build/src/common';
 import Schema$Video = youtube_v3.Schema$Video;
 import { Rules } from '@gitroom/nestjs-libraries/chat/rules.description.decorator';
@@ -116,6 +122,19 @@ export class YoutubeProvider extends SocialAbstract implements SocialProvider {
         value:
           'Your account is not verified, we have uploaded your video but we could not set the thumbnail. Please verify your account and try again.',
       };
+    }
+
+    return youtubeAuthError(body);
+  }
+
+  refreshErrorMessage(err: any): string | undefined {
+    const data = err?.response?.data || {};
+    const text = `${data.error_subtype || ''} ${data.error_description || ''} ${
+      err?.message || ''
+    }`;
+
+    if (text.includes('invalid_rapt')) {
+      return `because your organization's Google Workspace session policy invalidated its access. Ask your Google Workspace admin to mark Postiz as a trusted app and turn on "Exempt trusted apps" (https://support.google.com/a/answer/9368756) to prevent this from happening again`;
     }
 
     return undefined;
@@ -299,7 +318,7 @@ export class YoutubeProvider extends SocialAbstract implements SocialProvider {
       responseType: 'stream',
     });
 
-    const all: GaxiosResponse<Schema$Video> = await this.runInConcurrent(
+    const upload = (await this.runInConcurrent(
       async () =>
         youtubeClient.videos.insert({
           part: ['id', 'snippet', 'status'],
@@ -323,12 +342,28 @@ export class YoutubeProvider extends SocialAbstract implements SocialProvider {
           },
         }),
       true
-    );
+    )) as
+      | GaxiosResponse<Schema$Video>
+      | { err?: true; type?: string; value?: string };
+
+    const videoId = youtubeUploadedVideoId(upload);
+    if (!videoId) {
+      const message = youtubeHandledErrorMessage(
+        upload,
+        'YouTube did not return a video id after the upload, please try again'
+      );
+
+      if ((upload as { type?: string })?.type === 'refresh-token') {
+        throw new RefreshToken(this.identifier, '{}', {} as any, message);
+      }
+
+      throw new BadBody(this.identifier, '{}', {} as any, message);
+    }
 
     if (settings?.thumbnail?.path) {
       await this.runInConcurrent(async () =>
         youtubeClient.thumbnails.set({
-          videoId: all?.data?.id!,
+          videoId,
           media: {
             body: (
               await axios({
@@ -345,8 +380,8 @@ export class YoutubeProvider extends SocialAbstract implements SocialProvider {
     return [
       {
         id: firstPost.id,
-        releaseURL: `https://www.youtube.com/watch?v=${all?.data?.id}`,
-        postId: all?.data?.id!,
+        releaseURL: `https://www.youtube.com/watch?v=${videoId}`,
+        postId: videoId,
         status: 'success',
       },
     ];

@@ -3,6 +3,8 @@ export default {
   transform: { '^.+\\.(t|j)sx?$': ['ts-jest', { diagnostics: false, isolatedModules: true }] },
   moduleNameMapper: {
     '^@gitroom/helpers/(.*)$': '<rootDir>/libraries/helpers/src/$1',
+    '^@gitroom/nestjs-libraries/(.*)$':
+      '<rootDir>/libraries/nestjs-libraries/src/$1',
   },
   roots: ['<rootDir>/libraries/helpers/src'],
   testMatch: ['**/*.spec.ts'],

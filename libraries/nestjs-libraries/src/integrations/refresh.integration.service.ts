@@ -45,13 +45,18 @@ export class RefreshIntegrationService {
 
   private async refreshProcess(
     integration: Integration,
-    socialProvider: SocialProvider
+    socialProvider: SocialProvider,
+    cause = ''
   ): Promise<AuthTokenDetails | false> {
+    let refreshError: any = undefined;
     const refresh: false | AuthTokenDetails = await socialProvider
       .refreshToken(integration.refreshToken)
-      .catch((err) => false);
+      .catch((err) => {
+        refreshError = err;
+        return false as const;
+      });
 
-    if (!refresh) {
+    if (!refresh || !refresh.accessToken) {
       // Two flows can refresh the same channel at once (two posts, a post and
       // analytics). A provider that replaces the refresh token on every refresh
       // rejects the second one while the first is still storing its tokens:
@@ -95,17 +100,23 @@ export class RefreshIntegrationService {
         }
       }
 
+      if (refreshError) {
+        console.error(
+          `Could not refresh ${integration.providerIdentifier} integration ${integration.id}`,
+          refreshError?.response?.data || refreshError?.message || refreshError
+        );
+      }
+
       await this._integrationService.refreshNeeded(
         integration.organizationId,
         integration.id
       );
 
-      await this._integrationService.informAboutRefreshError(
+      await this._integrationService.disconnectChannel(
         integration.organizationId,
-        integration
+        integration,
+        socialProvider.refreshErrorMessage?.(refreshError) || cause
       );
-
-      await this._integrationService.disconnectChannel(integration.organizationId, integration);
 
       return false;
     }
@@ -114,11 +125,20 @@ export class RefreshIntegrationService {
       return refresh;
     }
 
-    const reConnect = await socialProvider.reConnect(
-      integration.rootInternalId,
-      integration.internalId,
-      refresh.accessToken
-    );
+    let reConnect;
+    try {
+      reConnect = await socialProvider.reConnect(
+        integration.rootInternalId,
+        integration.internalId,
+        refresh.accessToken
+      );
+    } catch (err: any) {
+      console.error(
+        `Could not reconnect ${integration.providerIdentifier} integration ${integration.id} after a successful token refresh`,
+        err?.response?.data || err?.message || err
+      );
+      throw err;
+    }
 
     return {
       ...refresh,

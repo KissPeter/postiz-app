@@ -32,6 +32,7 @@ import {
   RefreshToken,
 } from '@gitroom/nestjs-libraries/integrations/social.abstract';
 import { timer } from '@gitroom/helpers/utils/timer';
+import { keepRefreshedAuthTokens } from '@gitroom/helpers/utils/oauth.reconnect';
 import { TelegramProvider } from '@gitroom/nestjs-libraries/integrations/social/telegram.provider';
 import {
   AuthorizationActions,
@@ -454,7 +455,9 @@ export class IntegrationsController {
           refresh,
           auth.accessToken
         );
-        return res({ ...newAuth, refreshToken: body.refresh });
+        // reConnect only verifies identity. Keep the tokens from the new
+        // authentication, otherwise the stored refresh token is wiped.
+        return res(keepRefreshedAuthTokens(newAuth, auth));
       }
 
       return res(auth);
