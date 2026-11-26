@@ -62,13 +62,21 @@ export abstract class SocialAbstract {
         } catch (err) {
           console.log(err);
           const handle = this.handleErrors(JSON.stringify(err));
-          return { err: true, ...(handle || {}) };
+          return { err: true, value: 'Unknown Error', ...(handle || {}) };
         }
       },
       ignoreConcurrency
     );
 
     if (value && value?.err && value?.value) {
+      if (value.type === 'refresh-token') {
+        throw new RefreshToken(
+          this.identifier,
+          JSON.stringify({}),
+          {} as any,
+          value.value || ''
+        );
+      }
       throw new BadBody('', JSON.stringify({}), {} as any, value.value || '');
     }
 
